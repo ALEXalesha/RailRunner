@@ -92,10 +92,10 @@ tools/mutate.js     проверка проверок: ломает правил
 
 ```
 npm ci
-npm test            # 33 закона правил, ~25 с
+npm test            # 34 закона правил, ~25 с
 npm run test:web    # 19 сценариев страницы, ~3 мин
 npm run test:app    # 3 закона программы, ~1 мин
-npm run mutate      # 26 мутантов, ~10 мин
+npm run mutate      # 27 мутантов, ~10 мин
 npm run screens     # кадры для README
 npm run dist        # dist/RailRunner-<версия>-Setup.exe и -Portable.exe
 ```

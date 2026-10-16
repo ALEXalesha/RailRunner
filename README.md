@@ -94,10 +94,10 @@ tools/mutate.js     checks of the checks: breaks the rules one by one, the laws 
 
 ```
 npm ci
-npm test            # 33 laws of the rules, ~25 s
+npm test            # 34 laws of the rules, ~25 s
 npm run test:web    # 19 page scenarios, ~3 min
 npm run test:app    # 3 laws of the app, ~1 min
-npm run mutate      # 26 mutants, ~10 min
+npm run mutate      # 27 mutants, ~10 min
 npm run screens     # README frames
 npm run dist        # dist/RailRunner-<version>-Setup.exe and -Portable.exe
 ```

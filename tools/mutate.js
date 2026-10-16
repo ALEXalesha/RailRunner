@@ -33,6 +33,7 @@ const MUTANTS = [
   { id: 'swipe-no-threshold', file: 'js/core.js', from: 'if (ax < thr && ay < thr) {', to: 'if (ax < 5 && ay < 5) {', unit: 'свайпы' },
   { id: 'no-jump-buffer', file: 'js/core.js', from: 'if (run.jumpBuf > 0) doJump(run);', to: 'if (false) doJump(run);', unit: 'подкат в воздухе' },
   { id: 'no-side-bump', file: 'js/core.js', from: 'if (lateral && run.stumbleT <= 0) {', to: 'if (false) {', unit: 'боковой удар' },
+  { id: 'bump-to-last-pressed-lane', file: 'js/core.js', from: 'run.lane = Math.max(-1, Math.min(1, Math.round(prevX / C.LANE_W)));', to: 'run.lane = run.laneFrom;', unit: 'два быстрых нажатия' },
   { id: 'no-prune', file: 'js/core.js', from: 'const lim = pz - C.BEHIND;', to: 'const lim = -Infinity;', unit: 'не растёт бесконечно' },
   { id: 'hints-default-keys', file: 'js/app.js', from: 'const b = save.settings.bindings, l = I.lang;', to: 'const b = R.defaultBindings(), l = I.lang;', web: 'переназначение' },
   { id: 'pause-keeps-running', file: 'js/app.js', from: "if (!(state === 'playing' || (demo && state === 'menu'))) return;", to: "if (!(state === 'playing' || state === 'paused' || (demo && state === 'menu'))) return;", web: 'пауза:' },

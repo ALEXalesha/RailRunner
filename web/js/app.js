@@ -5,6 +5,7 @@
 // ?manual=1 - the simulation only moves by RailRunner.advance(seconds).
 (function () {
   'use strict';
+  const VERSION = '1.0.0';
   const R = window.RRCore, I = window.RRI18n, A = window.RRAudio;
   const DT = R.C.DT;
   const STORE = 'railrunner:save';
@@ -254,6 +255,7 @@
   function renderMenu() {
     $('m-best').textContent = save.best;
     $('m-coins').textContent = save.coins;
+    $('m-ver').textContent = 'RailRunner ' + VERSION;
   }
   function renderHowto() {
     const v = keysVars();
@@ -483,6 +485,7 @@
 
   // ---------- for tests and debugging ----------
   window.RailRunner = {
+    version: VERSION,
     core: R,
     audio: A,
     get run() { return run; },

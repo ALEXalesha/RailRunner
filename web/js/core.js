@@ -423,11 +423,13 @@
     return z + C.PLAYER_HALF_D > a && z - C.PLAYER_HALF_D < b;
   }
 
-  function hit(run, o, lateral) {
+  function hit(run, o, lateral, prevX) {
     if (run.invulnT > 0) return;
     if (lateral && run.stumbleT <= 0) {
-      // bounced off a side: back to the lane it came from, stumbling for a while
-      run.lane = run.laneFrom;
+      // bounced off a side: back to the lane on the side it came from (not the lane of the
+      // last key press - after two quick presses across a train that would be the train's
+      // own lane), stumbling for a while
+      run.lane = Math.max(-1, Math.min(1, Math.round(prevX / C.LANE_W)));
       run.stumbleT = C.STUMBLE_TIME;
       run.events.push('bump');
       return 'bump';
@@ -457,7 +459,7 @@
       if (run.y >= top - standOn) continue;          // above it, or on its roof
       if (run.y + h <= bot) continue;                // under it (a bar)
       const lateral = !overlapsX(prevX, o) && overlapsZ(prevZ, o, prevZ);
-      const res = hit(run, o, lateral);
+      const res = hit(run, o, lateral, prevX);
       if (res === 'bump') { run.x = prevX; return; }
     }
   }

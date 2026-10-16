@@ -8,6 +8,8 @@ test('страница открывается без ошибок и без се
   const errors = await open(page);
   await expect(page).toHaveTitle('Бег по рельсам');
   await expect(page.locator('meta[name="application-name"]')).toHaveAttribute('content', 'Бег по рельсам');
+  const pkg = require('../../package.json');
+  await expect(page.locator('#m-ver')).toHaveText('RailRunner ' + pkg.version);
   expect(await page.evaluate(() => !!document.querySelector('#view').getContext('webgl2'))).toBe(true);
   await page.click('#m-play');
   await advance(page, 5, true);

@@ -309,6 +309,18 @@ test('боковой удар отбрасывает в прежнюю поло�
   assert.equal(r2.alive, true);
 });
 
+test('два быстрых нажатия через поезд в средней полосе: удар отбрасывает туда, откуда бежал, а не в полосу поезда', () => {
+  const run = bare();
+  run.lane = -1; run.x = R.laneX(-1); run.laneFrom = -1;
+  place(run, { type: 'train', lane: 0, z0: 10, z1: 100, cars: 9 });
+  runTo(run, 30, (r) => { if (r.z >= 28 && r.z < 28.2) { R.act(r, 'right'); R.act(r, 'right'); } });
+  runTo(run, 40);
+  assert.equal(run.alive, true, 'не авария');
+  assert.ok(run.events.includes('bump'));
+  assert.equal(run.lane, -1, 'вернулся в свою полосу');
+  assert.equal(run.x, R.laneX(-1));
+});
+
 test('доска спасает от одной аварии, потом пропадает', () => {
   const run = bare();
   run.power.board = 30;
