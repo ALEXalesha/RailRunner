@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <title>Бег по рельсам</title>
+  <meta name="application-name" content="Бег по рельсам">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="Rail Runner: an endless 3D runner on three railway tracks">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="favicon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game">
+    <canvas id="view" aria-label="Игровое поле"></canvas>
+
+    <div id="hud" hidden>
+      <button id="btn-pause" class="icon-btn" type="button" data-i18n-title="pauseBtn" data-i18n-aria="pauseBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      </button>
+      <div class="hud-right">
+        <div id="hud-score" class="hud-score">0</div>
+        <div class="hud-coins"><span class="coin-dot" aria-hidden="true"></span><span id="hud-coins">0</span></div>
+        <div id="hud-mult" class="hud-mult" hidden>x2</div>
+      </div>
+      <div id="hud-powers" class="hud-powers"></div>
+      <div id="hud-hint" class="hud-hint"></div>
+      <div id="hud-count" class="hud-count"></div>
+      <div id="hud-toast" class="hud-toast"></div>
+    </div>
+    <div id="hud-fps" class="hud-fps" hidden></div>
+
+    <section id="scr-menu" class="screen" hidden>
+      <div class="panel menu-panel">
+        <h1 data-i18n="title">Бег по рельсам</h1>
+        <p class="sub" data-i18n="subtitle"></p>
+        <div class="stats">
+          <div><span data-i18n="best"></span><b id="m-best">0</b></div>
+          <div><span data-i18n="bank"></span><b id="m-coins">0</b></div>
+        </div>
+        <button id="m-play" class="btn primary big" type="button" data-i18n="play"></button>
+        <div class="row">
+          <button id="m-upgrades" class="btn" type="button" data-i18n="upgrades"></button>
+          <button id="m-settings" class="btn" type="button" data-i18n="settings"></button>
+        </div>
+        <button id="m-howto" class="btn ghost" type="button" data-i18n="howto"></button>
+        <p class="hint" id="m-hint"></p>
+        <p class="footer" data-i18n="footer"></p>
+      </div>
+    </section>
+
+    <section id="scr-pause" class="screen" hidden>
+      <div class="panel">
+        <h2 data-i18n="paused"></h2>
+        <button id="p-resume" class="btn primary big" type="button" data-i18n="resume"></button>
+        <div class="row">
+          <button id="p-restart" class="btn" type="button" data-i18n="restart"></button>
+          <button id="p-settings" class="btn" type="button" data-i18n="settings"></button>
+        </div>
+        <button id="p-menu" class="btn ghost" type="button" data-i18n="menu"></button>
+        <p class="hint" id="p-hint"></p>
+      </div>
+    </section>
+
+    <section id="scr-over" class="screen" hidden>
+      <div class="panel">
+        <h2 data-i18n="over"></h2>
+        <div id="o-record" class="record" hidden data-i18n="newRecord"></div>
+        <div class="results">
+          <div><span data-i18n="score"></span><b id="o-score">0</b></div>
+          <div><span data-i18n="coins"></span><b id="o-coins">0</b></div>
+          <div><span data-i18n="distance"></span><b id="o-dist">0</b></div>
+        </div>
+        <p class="hint" id="o-best"></p>
+        <button id="o-again" class="btn primary big" type="button" data-i18n="again"></button>
+        <div class="row">
+          <button id="o-upgrades" class="btn" type="button" data-i18n="upgrades"></button>
+          <button id="o-menu" class="btn" type="button" data-i18n="menu"></button>
+        </div>
+      </div>
+    </section>
+
+    <section id="scr-settings" class="screen" hidden>
+      <div class="panel wide">
+        <h2 data-i18n="settings"></h2>
+        <div class="field">
+          <span data-i18n="language"></span>
+          <div class="seg" id="s-lang" role="radiogroup">
+            <button type="button" data-v="ru">Русский</button>
+            <button type="button" data-v="en">English</button>
+          </div>
+        </div>
+        <div class="field">
+          <span data-i18n="theme"></span>
+          <div class="seg" id="s-theme" role="radiogroup">
+            <button type="button" data-v="auto" data-i18n="themeAuto"></button>
+            <button type="button" data-v="light" data-i18n="themeLight"></button>
+            <button type="button" data-v="dark" data-i18n="themeDark"></button>
+          </div>
+        </div>
+        <label class="field"><span data-i18n="music"></span><input id="s-music" type="range" min="0" max="100" step="5"></label>
+        <label class="field"><span data-i18n="sfx"></span><input id="s-sfx" type="range" min="0" max="100" step="5"></label>
+        <div class="field">
+          <span data-i18n="quality"></span>
+          <div class="seg" id="s-quality" role="radiogroup">
+            <button type="button" data-v="high" data-i18n="qualityHigh"></button>
+            <button type="button" data-v="low" data-i18n="qualityLow"></button>
+          </div>
+        </div>
+        <label class="check"><input id="s-fps" type="checkbox"><span data-i18n="showFps"></span></label>
+        <h3 data-i18n="controls"></h3>
+        <p class="hint" data-i18n="controlsHelp"></p>
+        <div id="s-keys" class="keys"></div>
+        <button id="s-reset" class="btn ghost" type="button" data-i18n="resetKeys"></button>
+        <div class="sticky-bottom"><button id="s-done" class="btn primary" type="button" data-i18n="done"></button></div>
+      </div>
+    </section>
+
+    <section id="scr-upgrades" class="screen" hidden>
+      <div class="panel wide">
+        <h2 data-i18n="upgrades"></h2>
+        <div class="stats"><div><span data-i18n="bank"></span><b id="u-coins">0</b></div></div>
+        <div id="u-list" class="upgrades"></div>
+        <div class="sticky-bottom"><button id="u-done" class="btn primary" type="button" data-i18n="done"></button></div>
+      </div>
+    </section>
+
+    <section id="scr-howto" class="screen" hidden>
+      <div class="panel wide">
+        <h2 data-i18n="howto"></h2>
+        <ul id="h-text" class="howto"></ul>
+        <h3 data-i18n="powersTitle"></h3>
+        <ul id="h-powers" class="howto"></ul>
+        <div class="sticky-bottom"><button id="h-done" class="btn primary" type="button" data-i18n="done"></button></div>
+      </div>
+    </section>
+
+    <div id="fatal" class="fatal" hidden></div>
+  </div>
+
+  <script src="vendor/three.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

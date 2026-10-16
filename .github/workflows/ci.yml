@@ -1,0 +1,30 @@
+# Checks on GitHub (the copy published by tools/publish_github.sh). The home Gitea runs
+# .gitea/workflows/ci.yml on the PC runner; keep both in step.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Laws
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Game rules (node:test)
+        run: npm test
+      - name: Page in headless Chromium (Playwright, one worker)
+        run: npx playwright test --workers=1

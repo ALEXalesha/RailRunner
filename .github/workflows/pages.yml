@@ -1,0 +1,40 @@
+# The game on GitHub Pages: https://alexalesha.github.io/RailRunner/
+#
+# web/ is the whole site as it is: plain scripts, three.js lies in web/vendor, no build
+# step and no npm install. The same files run in Electron and from a local file.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy the page
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lay out the site
+        run: |
+          mkdir -p _site
+          cp -r web/. _site/
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,26 @@
+# Checks on the home Gitea, on the PC runner (label windows).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Laws
+    runs-on: windows
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Game rules (node:test)
+        run: npm test
+      - name: Page in headless Chromium (Playwright, one worker)
+        run: npx playwright test --workers=1
+# The Electron tests (npm run test:app) and the mutants (npm run mutate) stay local:
+# the window is invisible in test mode, but the runner shares the PC with its user.
