@@ -46,14 +46,15 @@ test('рекорд и настройки переживают перезапус
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'railrunner-app-'));
   let first = await launch(dir);
   await first.win.evaluate(() => {
-    const s = RailRunner.core.defaultSave();
-    s.best = 4321; s.coins = 77; s.settings.theme = 'dark'; s.settings.lang = 'en';
+    const s = RailRunner.meta.defaultSave();
+    s.best = 4321; s.coins = 77; s.settings.theme = 'dark'; s.settings.lang = 'en'; s.tutorialDone = true; s.owned.chars.push('max'); s.char = 'max';
     localStorage.setItem('railrunner:save', JSON.stringify(s));
   });
   await first.app.close();
   const second = await launch(dir);
   try {
-    await expect(second.win.locator('#m-best')).toHaveText('4321');
+    await expect(second.win.locator('#m-best')).toHaveText('4,321');
+    expect(await second.win.evaluate(() => RailRunner.save.char)).toBe('max');
     await expect(second.win.locator('#m-play')).toHaveText('Play');
     expect(await second.win.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
   } finally {

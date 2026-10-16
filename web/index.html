@@ -5,7 +5,7 @@
   <title>Бег по рельсам</title>
   <meta name="application-name" content="Бег по рельсам">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-  <meta name="description" content="Rail Runner: an endless 3D runner on three railway tracks">
+  <meta name="description" content="Rail Runner: an endless 3D runner on three railway tracks through a whole city">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="favicon.png">
   <link rel="stylesheet" href="css/style.css">
@@ -13,39 +13,113 @@
 <body>
   <div id="game">
     <canvas id="view" aria-label="Игровое поле"></canvas>
+    <div id="flash" class="flash"></div>
 
     <div id="hud" hidden>
       <button id="btn-pause" class="icon-btn" type="button" data-i18n-title="pauseBtn" data-i18n-aria="pauseBtn">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
       </button>
-      <div class="hud-right">
-        <div id="hud-score" class="hud-score">0</div>
-        <div class="hud-coins"><span class="coin-dot" aria-hidden="true"></span><span id="hud-coins">0</span></div>
-        <div id="hud-mult" class="hud-mult" hidden>x2</div>
-      </div>
       <div id="hud-powers" class="hud-powers"></div>
+      <div class="hud-right">
+        <div class="hud-scoreline"><span id="hud-mult" class="hud-mult">x1</span><span id="hud-score" class="hud-score">0</span></div>
+        <div class="hud-coins"><span class="coin-dot" aria-hidden="true"></span><span id="hud-coins">0</span></div>
+        <div id="hud-dist" class="hud-dist">0</div>
+      </div>
+      <div id="hud-combo" class="hud-combo"><b id="hud-combo-n"></b><span class="bar"><i id="hud-combo-bar"></i></span></div>
+      <div id="hud-trick" class="hud-trick"></div>
+      <div id="hud-banner" class="hud-banner"></div>
+      <button id="btn-board" class="board-btn" type="button" data-i18n-title="boardBtn" data-i18n-aria="boardBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="9" width="20" height="6" rx="3" fill="#7d3cff"/><rect x="3" y="11" width="18" height="1.5" fill="#ff4fb8"/><rect x="3" y="13" width="18" height="1.2" fill="#4fe3ff"/></svg>
+        <span id="hud-boards">0</span>
+      </button>
       <div id="hud-hint" class="hud-hint"></div>
+      <div id="hud-tut" class="hud-tut"></div>
       <div id="hud-count" class="hud-count"></div>
       <div id="hud-toast" class="hud-toast"></div>
     </div>
     <div id="hud-fps" class="hud-fps" hidden></div>
 
-    <section id="scr-menu" class="screen" hidden>
+    <section id="scr-menu" class="screen menu-screen" hidden>
       <div class="panel menu-panel">
         <h1 data-i18n="title">Бег по рельсам</h1>
         <p class="sub" data-i18n="subtitle"></p>
         <div class="stats">
           <div><span data-i18n="best"></span><b id="m-best">0</b></div>
           <div><span data-i18n="bank"></span><b id="m-coins">0</b></div>
+          <div><span data-i18n="keys"></span><b id="m-keys">0</b></div>
         </div>
         <button id="m-play" class="btn primary big" type="button" data-i18n="play"></button>
+        <button id="m-daily" class="card-btn daily" type="button">
+          <span class="card-title" data-i18n="daily"></span>
+          <span id="m-daily-goal" class="card-text"></span>
+          <span id="m-daily-state" class="card-note"></span>
+        </button>
+        <button id="m-missions" class="card-btn" type="button">
+          <span class="card-title"><span data-i18n="missions"></span> <b id="m-mult" class="mult-badge">x1</b></span>
+          <span id="m-missions-list" class="mini-missions"></span>
+        </button>
         <div class="row">
-          <button id="m-upgrades" class="btn" type="button" data-i18n="upgrades"></button>
+          <button id="m-shop" class="btn" type="button" data-i18n="shop"></button>
+          <button id="m-ach" class="btn" type="button" data-i18n="achievements"></button>
+        </div>
+        <div class="row">
+          <button id="m-records" class="btn" type="button" data-i18n="records"></button>
           <button id="m-settings" class="btn" type="button" data-i18n="settings"></button>
         </div>
         <button id="m-howto" class="btn ghost" type="button" data-i18n="howto"></button>
         <p class="hint" id="m-hint"></p>
         <p class="footer"><span data-i18n="footer"></span> <span id="m-ver"></span></p>
+      </div>
+    </section>
+
+    <section id="scr-shop" class="screen side" hidden>
+      <div class="panel wide">
+        <h2 data-i18n="shop"></h2>
+        <div class="stats bank">
+          <div><span data-i18n="bank"></span><b id="sh-coins">0</b></div>
+          <div><span data-i18n="keys"></span><b id="sh-keys">0</b></div>
+          <div><span data-i18n="boards"></span><b id="sh-boards">0</b></div>
+        </div>
+        <div class="tabs" id="sh-tabs" role="tablist">
+          <button type="button" data-tab="chars" data-i18n="tabChars"></button>
+          <button type="button" data-tab="boards" data-i18n="tabBoards"></button>
+          <button type="button" data-tab="upgrades" data-i18n="tabUpgrades"></button>
+          <button type="button" data-tab="items" data-i18n="tabItems"></button>
+        </div>
+        <div id="sh-list" class="shop-list"></div>
+        <div class="sticky-bottom"><button id="sh-done" class="btn primary" type="button" data-i18n="done"></button></div>
+      </div>
+    </section>
+
+    <section id="scr-missions" class="screen" hidden>
+      <div class="panel wide">
+        <h2 data-i18n="missions"></h2>
+        <div class="mult-big" id="mi-mult"></div>
+        <p class="hint" data-i18n="missionsHelp"></p>
+        <div id="mi-list" class="mission-list"></div>
+        <h3 data-i18n="daily"></h3>
+        <div id="mi-daily" class="daily-box"></div>
+        <div class="sticky-bottom"><button id="mi-done" class="btn primary" type="button" data-i18n="done"></button></div>
+      </div>
+    </section>
+
+    <section id="scr-ach" class="screen" hidden>
+      <div class="panel wide">
+        <h2 data-i18n="achievements"></h2>
+        <p class="hint" id="ac-count"></p>
+        <div id="ac-list" class="ach-grid"></div>
+        <div class="sticky-bottom"><button id="ac-done" class="btn primary" type="button" data-i18n="done"></button></div>
+      </div>
+    </section>
+
+    <section id="scr-records" class="screen" hidden>
+      <div class="panel wide">
+        <h2 data-i18n="records"></h2>
+        <h3 data-i18n="bestRuns"></h3>
+        <div id="rc-runs" class="runs"></div>
+        <h3 data-i18n="statsTitle"></h3>
+        <dl id="rc-stats" class="stat-list"></dl>
+        <div class="sticky-bottom"><button id="rc-done" class="btn primary" type="button" data-i18n="done"></button></div>
       </div>
     </section>
 
@@ -58,7 +132,19 @@
           <button id="p-settings" class="btn" type="button" data-i18n="settings"></button>
         </div>
         <button id="p-menu" class="btn ghost" type="button" data-i18n="menu"></button>
+        <div id="p-missions" class="mini-missions left"></div>
         <p class="hint" id="p-hint"></p>
+      </div>
+    </section>
+
+    <section id="scr-continue" class="screen" hidden>
+      <div class="panel">
+        <h2 data-i18n="crashTitle"></h2>
+        <div class="timer"><i id="c-timer"></i></div>
+        <p class="hint" id="c-have"></p>
+        <button id="c-keys" class="btn primary big" type="button"></button>
+        <button id="c-buy" class="btn" type="button"></button>
+        <button id="c-no" class="btn ghost" type="button" data-i18n="continueNo"></button>
       </div>
     </section>
 
@@ -70,11 +156,14 @@
           <div><span data-i18n="score"></span><b id="o-score">0</b></div>
           <div><span data-i18n="coins"></span><b id="o-coins">0</b></div>
           <div><span data-i18n="distance"></span><b id="o-dist">0</b></div>
+          <div><span data-i18n="comboWord"></span><b id="o-combo">0</b></div>
         </div>
         <p class="hint" id="o-best"></p>
+        <div id="o-news" class="news"></div>
+        <div id="o-missions" class="mini-missions left"></div>
         <button id="o-again" class="btn primary big" type="button" data-i18n="again"></button>
         <div class="row">
-          <button id="o-upgrades" class="btn" type="button" data-i18n="upgrades"></button>
+          <button id="o-shop" class="btn" type="button" data-i18n="shop"></button>
           <button id="o-menu" class="btn" type="button" data-i18n="menu"></button>
         </div>
       </div>
@@ -98,30 +187,38 @@
             <button type="button" data-v="dark" data-i18n="themeDark"></button>
           </div>
         </div>
-        <label class="field"><span data-i18n="music"></span><input id="s-music" type="range" min="0" max="100" step="5"></label>
-        <label class="field"><span data-i18n="sfx"></span><input id="s-sfx" type="range" min="0" max="100" step="5"></label>
+        <p class="hint" data-i18n="themeHelp"></p>
+        <h3 data-i18n="graphics"></h3>
         <div class="field">
           <span data-i18n="quality"></span>
           <div class="seg" id="s-quality" role="radiogroup">
-            <button type="button" data-v="high" data-i18n="qualityHigh"></button>
-            <button type="button" data-v="low" data-i18n="qualityLow"></button>
+            <button type="button" data-v="auto" data-i18n="qAuto"></button>
+            <button type="button" data-v="high" data-i18n="qHigh"></button>
+            <button type="button" data-v="medium" data-i18n="qMedium"></button>
+            <button type="button" data-v="low" data-i18n="qLow"></button>
           </div>
         </div>
+        <p class="hint" data-i18n="qualityHelp"></p>
+        <div class="field">
+          <span data-i18n="particles"></span>
+          <div class="seg" id="s-particles" role="radiogroup">
+            <button type="button" data-v="high" data-i18n="pHigh"></button>
+            <button type="button" data-v="low" data-i18n="pLow"></button>
+            <button type="button" data-v="off" data-i18n="pOff"></button>
+          </div>
+        </div>
+        <label class="check"><input id="s-shadows" type="checkbox"><span data-i18n="shadows"></span></label>
+        <label class="check"><input id="s-shake" type="checkbox"><span data-i18n="shake"></span></label>
         <label class="check"><input id="s-fps" type="checkbox"><span data-i18n="showFps"></span></label>
+        <h3 data-i18n="sound"></h3>
+        <label class="field"><span data-i18n="music"></span><input id="s-music" type="range" min="0" max="100" step="5"></label>
+        <label class="field"><span data-i18n="sfx"></span><input id="s-sfx" type="range" min="0" max="100" step="5"></label>
         <h3 data-i18n="controls"></h3>
         <p class="hint" data-i18n="controlsHelp"></p>
         <div id="s-keys" class="keys"></div>
         <button id="s-reset" class="btn ghost" type="button" data-i18n="resetKeys"></button>
+        <button id="s-tutorial" class="btn ghost" type="button" data-i18n="tutorialAgain"></button>
         <div class="sticky-bottom"><button id="s-done" class="btn primary" type="button" data-i18n="done"></button></div>
-      </div>
-    </section>
-
-    <section id="scr-upgrades" class="screen" hidden>
-      <div class="panel wide">
-        <h2 data-i18n="upgrades"></h2>
-        <div class="stats"><div><span data-i18n="bank"></span><b id="u-coins">0</b></div></div>
-        <div id="u-list" class="upgrades"></div>
-        <div class="sticky-bottom"><button id="u-done" class="btn primary" type="button" data-i18n="done"></button></div>
       </div>
     </section>
 
@@ -129,6 +226,8 @@
       <div class="panel wide">
         <h2 data-i18n="howto"></h2>
         <ul id="h-text" class="howto"></ul>
+        <h3 data-i18n="obstaclesTitle"></h3>
+        <ul id="h-obstacles" class="howto"></ul>
         <h3 data-i18n="powersTitle"></h3>
         <ul id="h-powers" class="howto"></ul>
         <div class="sticky-bottom"><button id="h-done" class="btn primary" type="button" data-i18n="done"></button></div>
@@ -140,8 +239,12 @@
 
   <script src="vendor/three.js"></script>
   <script src="js/core.js"></script>
+  <script src="js/meta.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/gfx.js"></script>
+  <script src="js/scenery.js"></script>
+  <script src="js/actors.js"></script>
   <script src="js/render.js"></script>
   <script src="js/app.js"></script>
 </body>
