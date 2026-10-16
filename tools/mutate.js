@@ -65,6 +65,9 @@ const MUTANTS = [
   // ---------- страница (app.js, render.js, css) ----------
   { id: 'hints-default-keys', file: 'js/app.js', from: 'const b = save.settings.bindings, l = I.lang;', to: 'const b = R.defaultBindings(), l = I.lang;', web: 'переназначение' },
   { id: 'pause-keeps-running', file: 'js/app.js', from: "if (!(state === 'playing' || (demo && state === 'menu' && overlay !== 'shop'))) return;", to: "if (!(state === 'playing' || state === 'paused' || (demo && state === 'menu'))) return;", web: 'пауза:' },
+  { id: 'ramp-inside-out', file: 'js/gfx.js', from: '-hw, 0, 0, hw, H, L, hw, 0, 0, -hw, 0, 0, -hw, H, L, hw, H, L,', to: '-hw, 0, 0, hw, 0, 0, hw, H, L, -hw, 0, 0, hw, H, L, -hw, H, L,', web: 'пандус:' },
+  { id: 'catenary-low', file: 'js/scenery.js', from: 'const CATENARY_WIRE_Y = 10.2;', to: 'const CATENARY_WIRE_Y = 5.85;', web: 'провода:' },
+  { id: 'catenary-gantry-low', file: 'js/scenery.js', from: "G.box(0.04, 0.8, 0.04, 0x444444, [lx, C0 + 0.35, 0])", to: "G.box(0.04, 0.8, 0.04, 0x444444, [lx, 6.2, 0])", web: 'провода:' },
   { id: 'store-without-prefix', file: 'js/app.js', from: "const STORE = 'railrunner:save';", to: "const STORE = 'save';", web: 'хранилище' },
   { id: 'theme-not-saved', file: 'js/app.js', from: "bindSeg('s-theme', (v) => { save.settings.theme = v; applyTheme(); });", to: "bindSeg('s-theme', (v) => { const t = save.settings.theme; save.settings.theme = v; applyTheme(); save.settings.theme = t; });", web: 'тема' },
   { id: 'dark-not-neon', file: 'js/app.js', from: "FIXED_DISTRICT || (resolvedTheme() === 'dark' ? 'neon' : 'city');", to: "FIXED_DISTRICT || 'city';", web: 'тема' },

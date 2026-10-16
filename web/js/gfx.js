@@ -72,16 +72,19 @@
     return part(new THREE.CylinderGeometry(rt, rb, h, seg), color, Object.assign({ p, r }, extra));
   }
   const sphere = (rad, color, p, s, ws = 10, hs = 8) => part(new THREE.SphereGeometry(rad, ws, hs), color, { p, s });
-  // a wedge from height 0 at z=0 to height H at z=L, width W (centred on x)
+  // a wedge from height 0 at z=0 to height H at z=L, width W (centred on x).
+  // Every triangle is wound counter-clockwise seen from outside: three.js draws only the front
+  // side, and in 2.0.0 the faces were wound inside out - the slope was invisible from above
+  // and the ramp looked transparent (only its yellow edges showed).
   function wedge(W, H, L, color) {
     const hw = W / 2;
     const v = [
-      -hw, 0, 0, hw, 0, 0, hw, H, L, -hw, 0, 0, hw, H, L, -hw, H, L,
-      -hw, 0, 0, -hw, H, L, -hw, 0, L,
-      hw, 0, 0, hw, 0, L, hw, H, L,
-      -hw, 0, L, -hw, H, L, hw, H, L, -hw, 0, L, hw, H, L, hw, 0, L,
+      -hw, 0, 0, hw, H, L, hw, 0, 0, -hw, 0, 0, -hw, H, L, hw, H, L,
+      -hw, 0, 0, -hw, 0, L, -hw, H, L,
+      hw, 0, 0, hw, H, L, hw, 0, L,
+      -hw, 0, L, hw, H, L, -hw, H, L, -hw, 0, L, hw, 0, L, hw, H, L,
     ];
-    const uv = [0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0];
+    const uv = [0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1];
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));

@@ -11,6 +11,12 @@
   const K = R.C;
   const SEG = 12;
   const WALL_X = K.LANE_W * 1.5 + 1.15;
+  // The contact wire hangs higher than anything the player reaches: a super jump from a train
+  // roof (feet at 6.6 m, head at 8.3 m), the jetpack (feet at 7.2 m, head at 8.9 m) and the
+  // camera that follows them (up to 9.5 m). In 2.0.0 the wire hung at 5.85 m: on a roof the
+  // camera sat 0.15 m above it and the black wire covered the runner, a jump went through it.
+  const CATENARY_WIRE_Y = 10.2;
+  const CATENARY_LOW = CATENARY_WIRE_Y - 0.05;   // the lowest part over the tracks (droppers)
 
   // ---------- looks: light and colours of every district (and the second lap's morning) ----------
   const LOOKS = {
@@ -251,14 +257,16 @@
       G.box(0.5, 0.12, 0.26, 0x4a5056, [-1.25, 6.0, 0]),
     ]);
     Gm.glow = new THREE.SphereGeometry(0.16, 8, 6);
-    // a catenary gantry across the three tracks
+    // a catenary gantry across the three tracks: everything over the tracks is higher than
+    // CATENARY_LOW (see there)
+    const C0 = CATENARY_WIRE_Y;
     const gant = [
-      G.box(0.32, 7.2, 0.32, 0x7d858d, [-5.0, 3.6, 0]), G.box(0.32, 7.2, 0.32, 0x7d858d, [5.0, 3.6, 0]),
-      G.box(10.6, 0.3, 0.3, 0x7d858d, [0, 6.9, 0]), G.box(10.6, 0.12, 0.12, 0x7d858d, [0, 6.45, 0]),
+      G.box(0.32, C0 + 1.35, 0.32, 0x7d858d, [-5.0, (C0 + 1.35) / 2, 0]), G.box(0.32, C0 + 1.35, 0.32, 0x7d858d, [5.0, (C0 + 1.35) / 2, 0]),
+      G.box(10.6, 0.3, 0.3, 0x7d858d, [0, C0 + 1.05, 0]), G.box(10.6, 0.12, 0.12, 0x7d858d, [0, C0 + 0.6, 0]),
     ];
     for (const lx of [-K.LANE_W, 0, K.LANE_W]) {
-      gant.push(G.box(0.04, 0.8, 0.04, 0x444444, [lx, 6.2, 0]));
-      gant.push(G.cyl(0.07, 0.07, 0.25, 6, 0x9b5a3a, [lx, 6.6, 0]));
+      gant.push(G.box(0.04, 0.8, 0.04, 0x444444, [lx, C0 + 0.35, 0]));
+      gant.push(G.cyl(0.07, 0.07, 0.25, 6, 0x9b5a3a, [lx, C0 + 0.75, 0]));
     }
     Gm.gantry = G.merge(gant);
     // a signal: pole, head with three lights facing the player (lights separate)
@@ -399,10 +407,12 @@
     mats.rail = railMesh.material;
     const wires = [];
     for (const lx of [-K.LANE_W, 0, K.LANE_W]) {
-      wires.push(G.box(0.03, 0.03, LEN, 0x222222, [lx, 5.85, 0]));
-      wires.push(G.box(0.025, 0.025, LEN, 0x222222, [lx, 6.45, 0]));
+      wires.push(G.box(0.03, 0.03, LEN, 0x222222, [lx, CATENARY_WIRE_Y, 0]));
+      wires.push(G.box(0.025, 0.025, LEN, 0x222222, [lx, CATENARY_WIRE_Y + 0.6, 0]));
     }
     const wireMesh = new THREE.Mesh(G.merge(wires), new THREE.MeshBasicMaterial({ vertexColors: true }));
+    wireMesh.name = 'catenary-wires';
+    P.gantry.mesh.name = 'catenary-gantry';
     track.add(wireMesh);
     const SLEEPER_STEP = 1.1, SLEEPERS = Math.ceil((opts.ahead + opts.behind + 10) / SLEEPER_STEP);
     const sleepers = new THREE.InstancedMesh(new THREE.BoxGeometry(1.75, 0.08, 0.24), mats.sleeper, SLEEPERS * 3);
@@ -607,5 +617,5 @@
     return { update, follow, setLook, setDetail, setLang, setShowcase, smoke, pools: P, mats, track, water, skyline };
   }
 
-  root.RRScenery = { create, lookAt, LOOKS, SEG };
+  root.RRScenery = { create, lookAt, LOOKS, SEG, CATENARY_LOW };
 })(typeof self !== 'undefined' ? self : this);

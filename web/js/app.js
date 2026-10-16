@@ -992,7 +992,7 @@
     get manual() { return MANUAL; },
     get tutorial() { return tut; },
     get lastOver() { return lastOver; },
-    view: { info: () => view.info(), get theme() { return view.theme; }, get quality() { return view.quality; }, get look() { return view.look; }, get scene() { return view.scene; } },
+    view: { info: () => view.info(), get theme() { return view.theme; }, get quality() { return view.quality; }, get look() { return view.look; }, get scene() { return view.scene; }, get camera() { return view.camera; } },
     // move the simulation by whole steps (works in ?manual=1 and normally);
     // { auto: true } - the autopilot plays the run (tests and README frames)
     advance(seconds, opts = {}) {

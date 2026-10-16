@@ -781,3 +781,58 @@ test('без WebGL - понятное сообщение вместо пусто
   await expect(page.locator('#fatal')).toBeVisible();
   await expect(page.locator('#fatal')).toContainText('WebGL');
 });
+
+test('пандус: все грани смотрят наружу - склон виден сверху и спереди, не прозрачный', async ({ page }) => {
+  await open(page);
+  const bad = await page.evaluate(() => {
+    const K = RailRunner.core.C;
+    const g = RRGfx.wedge(K.TRAIN_HALF_W * 2, K.TRAIN_H, K.RAMP_LEN, 0xffffff);
+    const p = g.attributes.position.array;
+    // a point inside the wedge (it is convex): the normal of every face must point away from it
+    const c = [0, K.TRAIN_H * 0.3, K.RAMP_LEN * 0.7];
+    const out = [];
+    for (let i = 0; i < p.length; i += 9) {
+      const a = [p[i], p[i + 1], p[i + 2]], b = [p[i + 3], p[i + 4], p[i + 5]], d = [p[i + 6], p[i + 7], p[i + 8]];
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [d[0] - a[0], d[1] - a[1], d[2] - a[2]];
+      const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      const m = [(a[0] + b[0] + d[0]) / 3 - c[0], (a[1] + b[1] + d[1]) / 3 - c[1], (a[2] + b[2] + d[2]) / 3 - c[2]];
+      if (n[0] * m[0] + n[1] * m[1] + n[2] * m[2] <= 0) out.push(i / 9);
+    }
+    // the slope faces up and towards the runner
+    return { out, faces: p.length / 9 };
+  });
+  expect(bad.faces).toBeGreaterThanOrEqual(6);
+  expect(bad.out).toEqual([]);
+});
+
+test('провода: контактная сеть выше бегуна и камеры - на крыше, в суперпрыжке с крыши и на ранце', async ({ page }) => {
+  await open(page);
+  await page.click('#m-play');
+  await clearWorld(page);
+  const r = await page.evaluate(() => {
+    const view = RailRunner.view, R = RailRunner.core, run = RailRunner.run, w = run.world;
+    const low = RRScenery.CATENARY_LOW;
+    // the real meshes: the wire's bottom and the gantry's lowest part over the tracks
+    const wires = view.scene.getObjectByName('catenary-wires');
+    wires.geometry.computeBoundingBox();
+    const gp = view.scene.getObjectByName('catenary-gantry').geometry.attributes.position.array;
+    let gantLow = Infinity;
+    for (let i = 0; i < gp.length; i += 3) if (Math.abs(gp[i]) < R.C.LANE_W + 1.2) gantLow = Math.min(gantLow, gp[i + 1]);
+    // a long train under the player, the player on its roof
+    const o = { id: 990001, type: 'train', lane: 0, z0: run.z - 20, z1: run.z + 400, moving: false, cars: 40, color: 1, ridable: true, broken: false, passed: false, near: false };
+    const e = R.encounter(o); o.enc0 = e[0]; o.enc1 = e[1]; w.obstacles.push(o);
+    run.y = R.C.TRAIN_H; run.vy = 0;
+    let camMax = 0, headMax = 0;
+    const watch = (s) => { for (let i = 0; i < s * 60; i++) { RailRunner.advance(1 / 60); camMax = Math.max(camMax, view.camera.position.y); headMax = Math.max(headMax, run.y + R.C.PLAYER_H); } };
+    watch(1.5);
+    run.power.boots = 6; R.act(run, 'jump'); watch(1.6);
+    run.power.jetpack = 3; watch(3);
+    return { low, wireLow: wires.geometry.boundingBox.min.y, gantLow, camMax, headMax, alive: run.alive };
+  });
+  expect(r.alive).toBe(true);
+  expect(r.wireLow).toBeGreaterThanOrEqual(r.low - 1e-4);
+  expect(r.gantLow).toBeGreaterThanOrEqual(r.low - 1e-4);
+  expect(r.camMax).toBeGreaterThan(8);              // the scenario did reach the jetpack height
+  expect(r.camMax).toBeLessThan(r.low - 0.3);
+  expect(r.headMax).toBeLessThan(r.low - 0.3);
+});
