@@ -48,6 +48,7 @@
       "ru"
     ],
     "compression": "maximum",
+    "publish": null,
     "win": {
       "icon": "assets/icon.ico",
       "target": [
