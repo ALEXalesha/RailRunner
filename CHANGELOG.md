@@ -1,5 +1,39 @@
 # Changelog / Журнал изменений
 
+## 2.0.0 - 2026-10-17
+
+A real runner instead of a demo. / Настоящий раннер вместо пробы.
+
+- Five districts one after another in a run - the city by day, the industrial zone at sunset,
+  the bridge over the river, the tunnel, the neon city at night - with their own light, sky,
+  weather (rain, fog), scenery (houses, stations, signals, catenary, graffiti, billboards,
+  warehouses, chimneys with smoke, cranes, the bridge truss, neon signs) and music.
+  / Пять районов друг за другом: город днём, промзона на закате, мост над рекой, туннель,
+  неоновый город ночью - со своим светом, небом, погодой (дождь, туман), окружением и музыкой.
+- Detailed trains (cars with windows, doors, bogies, cabs, lights, pantographs; freight
+  locomotives, box and tank cars). New obstacles: fences, repair pits, freight trains rolling
+  away; hopping from roof to roof onto the train on the next track. / Детальные поезда, новые
+  препятствия: ограждения, ямы-ремонт, уезжающие товарные поезда; переход с крыши на крышу.
+- New power-up: the jetpack (flight over the trains along a trail of coins); spring boots became
+  super sneakers (also over fences); the hoverboard can be switched on from a stock (B, E or the
+  on-screen button). / Новый ускоритель - реактивный ранец; супер-кроссовки; доска по кнопке.
+- Six characters on joints with animated run, jump, slide, fall, flight and hoverboard stance;
+  six hoverboards; a shop with a 3D preview, upgrades, keys and spare boards. / Шесть персонажей
+  на суставах с анимацией, шесть досок, магазин с просмотром в 3D.
+- Tricks and combo, missions (three at a time, the score multiplier up to x30, skipping for
+  keys), the daily challenge with a streak, 22 achievements with badges, the ten best runs and
+  statistics, continuing a run after a crash for keys. / Трюки и комбо, задания и множитель,
+  испытание дня, достижения, рекорды и статистика, продолжение за ключи.
+- The tutorial in the first run; "juice": particles, camera shake, flashes, slow motion at a
+  crash, a smooth camera, music by district that speeds up with the run. / Обучение в первом
+  забеге; частицы, тряска, вспышки, замедление при аварии, музыка по районам.
+- Settings: graphics quality "Auto" (keeps 60 fps by the frame time), high, medium, low; shadows;
+  particles; camera shake. / Настройки: качество «Авто» и три уровня, тени, частицы, тряска.
+- A 1.0 save is migrated with nothing lost (a law checks it). / Сохранение 1.0 переезжает без
+  потерь (проверяет закон).
+- Laws: 61 for the rules and progress, 30 player scenarios in headless Chromium, 3 for the app,
+  64 mutants. / Законы: 61 правил и прогресса, 30 сценариев страницы, 3 программы, 64 мутанта.
+
 ## 1.0.0 - 2026-10-16
 
 First release. / Первый выпуск.

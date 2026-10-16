@@ -4,7 +4,8 @@
 //
 // Address parameters (for tests and README frames): ?seed=N - the run's world,
 // ?manual=1 - the simulation only moves by RailRunner.advance(seconds), ?date=YYYY-MM-DD - the
-// day of the daily challenge, ?preserve=1 - keep the picture for screenshots.
+// day of the daily challenge, ?district=industrial - the district a run starts in,
+// ?preserve=1 - keep the picture for screenshots.
 (function () {
   'use strict';
   const VERSION = '2.0.0';
@@ -65,7 +66,8 @@
   let tut = null;               // { step, waiting, doneT }
   let announced = new Set(), dailyAnnounced = false, lastOver = null;
   const seedNow = () => (FIXED_SEED !== null ? FIXED_SEED : (Date.now() ^ (Math.random() * 0x7fffffff)) >>> 0);
-  const startDistrict = () => (resolvedTheme() === 'dark' ? 'neon' : 'city');
+  const FIXED_DISTRICT = R.DISTRICTS.includes(params.get('district')) ? params.get('district') : null;
+  const startDistrict = () => FIXED_DISTRICT || (resolvedTheme() === 'dark' ? 'neon' : 'city');
 
   function newDemo() {
     return R.newRun(FIXED_SEED !== null ? FIXED_SEED + 1 : seedNow(), { upgrades: save.upgrades, startDistrict: startDistrict() });

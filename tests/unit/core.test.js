@@ -737,6 +737,12 @@ test('промах на волосок: уйти с пути поезда в п�
   place(early, { type: 'train', lane: 0, z0: 40, z1: 49 });
   runTo(early, 60, pressAt(10, 'left'));
   assert.equal(early.stats.near, 0);
+  // чуть раньше окна «на волосок» (на 1,2 м) - уже не трюк
+  const edge = bare();
+  place(edge, { type: 'train', lane: 0, z0: 40, z1: 49 });
+  runTo(edge, 60, pressAt(40 - C.PLAYER_HALF_D - v * C.NEAR_TIME - 1.2, 'left'));
+  assert.ok(edge.alive);
+  assert.equal(edge.stats.near, 0);
 });
 
 test('удар боком сбрасывает комбо', () => {

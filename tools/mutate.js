@@ -67,7 +67,7 @@ const MUTANTS = [
   { id: 'pause-keeps-running', file: 'js/app.js', from: "if (!(state === 'playing' || (demo && state === 'menu' && overlay !== 'shop'))) return;", to: "if (!(state === 'playing' || state === 'paused' || (demo && state === 'menu'))) return;", web: 'пауза:' },
   { id: 'store-without-prefix', file: 'js/app.js', from: "const STORE = 'railrunner:save';", to: "const STORE = 'save';", web: 'хранилище' },
   { id: 'theme-not-saved', file: 'js/app.js', from: "bindSeg('s-theme', (v) => { save.settings.theme = v; applyTheme(); });", to: "bindSeg('s-theme', (v) => { const t = save.settings.theme; save.settings.theme = v; applyTheme(); save.settings.theme = t; });", web: 'тема' },
-  { id: 'dark-not-neon', file: 'js/app.js', from: "const startDistrict = () => (resolvedTheme() === 'dark' ? 'neon' : 'city');", to: "const startDistrict = () => 'city';", web: 'тема' },
+  { id: 'dark-not-neon', file: 'js/app.js', from: "FIXED_DISTRICT || (resolvedTheme() === 'dark' ? 'neon' : 'city');", to: "FIXED_DISTRICT || 'city';", web: 'тема' },
   { id: 'title-not-translated', file: 'js/app.js', from: "    document.title = I.t('title');\n", to: '', web: 'язык' },
   { id: 'hidden-tab-runs', file: 'js/app.js', from: "document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });", to: '', web: 'скрытая вкладка' },
   { id: 'demo-makes-noise', file: 'js/app.js', from: '      if (demo) continue;\n', to: '', web: 'меню: за экраном' },
