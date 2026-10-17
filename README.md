@@ -55,6 +55,10 @@ played again from the settings.
   the train on the next track; **oncoming** ones with headlights sound the horn; **freight** trains
   roll away and you catch up with them.
 - **A side hit** throws you back to the track you came from and you stumble; a second hit soon after is a crash.
+- **Clipping an edge** is a knock, not a crash: the toes on the top of a hurdle after a late jump, its
+  edge on landing, a corner after a late dodge - if no more than 10 % of the obstacle's height or width
+  is touched. You stumble for 2.5 s; a second knock or hit in that time is a crash. The hitboxes of
+  hurdles, bars and fences are the size of their visible models.
 
 ### Power-ups
 
@@ -90,7 +94,8 @@ each power-up is a bar in the top left corner.
   hair. Any of them can be looked at before buying: in the shop the character stands on the tracks
   and turns around.
 - Hoverboards: Classic, Flame, Wave, Stars, Neon, Gold.
-- Power-up upgrades, keys (500 coins) and spare hoverboards (200 coins).
+- Power-up upgrades, keys (500 coins) and spare hoverboards (200 coins). A new player starts with
+  three hoverboards.
 
 ### More
 
@@ -146,10 +151,10 @@ tools/mutate.js     testing the tests: breaks the rules one by one, the laws mus
 
 ```
 npm ci
-npm test            # 61 laws of the rules and the progress, ~40 s
-npm run test:web    # 34 page scenarios, ~20 min
+npm test            # 65 laws of the rules and the progress, ~40 s
+npm run test:web    # 38 page scenarios, ~20 min
 npm run test:app    # 3 app laws, ~1 min
-npm run mutate      # 72 mutants, ~50 min (node tools/mutate.js --check only checks the breakages fit)
+npm run mutate      # 82 mutants, ~50 min (node tools/mutate.js --check only checks the breakages fit)
 npm run screens     # README frames
 npm run dist        # dist/RailRunner-<version>-Setup.exe and -Portable.exe
 ```
