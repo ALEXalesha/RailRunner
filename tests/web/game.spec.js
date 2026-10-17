@@ -250,6 +250,27 @@ test('авария: ключей нет, но хватает монет - док
   expect(await page.evaluate(() => RailRunner.save.keys)).toBe(5);
 });
 
+test('ключ, найденный в забеге, сразу в запасе: после аварии им можно продолжить', async ({ page }) => {
+  await open(page, '?manual=1&seed=7', { save: { keys: 0, coins: 0 } });
+  await page.click('#m-play');
+  await clearWorld(page);
+  await page.evaluate(() => { const r = RailRunner.run; r.world.powers.push({ id: 880001, kind: 'key', lane: r.lane, z: r.z + 10, y: 1.0, taken: false }); });
+  await advance(page, 1);
+  await expect(page.locator('#hud-toast')).toHaveText('Ключ!');
+  expect(await page.evaluate(() => RailRunner.save.keys)).toBe(1);
+  await obstacleAhead(page, 'hurdle');
+  expect(await advanceUntil(page, ['continue', 'over'], 20)).toBe('continue');
+  await expect(page.locator('#c-have')).toHaveText('У вас ключей: 1');
+  await expect(page.locator('#c-keys')).toBeEnabled();
+  await page.click('#c-keys');
+  expect(await page.evaluate(() => [RailRunner.save.keys, RailRunner.run.alive, RailRunner.state])).toEqual([0, true, 'countdown']);
+  // the key is counted once: the finished run does not add it again
+  await advance(page, 2);
+  await obstacleAhead(page, 'hurdle', 50);
+  expect(await advanceUntil(page, ['continue', 'over'], 20)).toBe('over');
+  expect(await page.evaluate(() => [RailRunner.save.keys, RailRunner.save.stats.keys])).toEqual([0, 1]);
+});
+
 test('итоги: очки, монеты, рекорд, место в рекордах, новости; всё сохраняется и видно после перезагрузки', async ({ page }) => {
   await open(page);
   await page.click('#m-play');
@@ -417,6 +438,7 @@ async function layoutProblems(page, where) {
       if (r.bottom < cr.top || r.top > cr.bottom) continue;          // прокручено за край
       if (r.left < pr.left - 0.5 || r.right > pr.right + 0.5) out.push(`${where}: ${el.id || el.textContent.trim().slice(0, 20)} вылезает вбок`);
       if (el.scrollWidth > el.clientWidth + 2 && el.tagName === 'BUTTON' && !el.classList.contains('key')) out.push(`${where}: текст не влез в «${el.textContent.trim()}»`);
+      if (el.scrollWidth > el.clientWidth + 2 && (el.classList.contains('ach') || el.classList.contains('shop-card') || el.classList.contains('mission'))) out.push(`${where}: текст вылезает из карточки «${el.textContent.trim().slice(0, 30)}»`);
     }
     for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
       const a = els[i], b = els[j];

@@ -228,7 +228,7 @@
   function renderOverNews() {
     if (!lastOver) return;
     const { rec, mis, daily, ach } = lastOver;
-    $('o-best').textContent = I.t('record', { n: save.best }) + (rec.rank ? ' · ' + I.t('rankText', { n: rec.rank }) : '');
+    $('o-best').textContent = I.t('record', { n: fmt(save.best) }) + (rec.rank ? ' · ' + I.t('rankText', { n: rec.rank }) : '');
     const news = [];
     for (const id of mis.completed) news.push('✓ ' + missionText(id, save.missions.level - (mis.levelUp ? 1 : 0)) + ' · ' + I.t('missionReward', { n: M.missionReward(save.missions.level - (mis.levelUp ? 1 : 0)) }));
     if (mis.levelUp) news.push('★ ' + I.t('levelUp', { n: save.missions.level }));
@@ -333,7 +333,14 @@
       if (e === 'bump') toast(I.t('bump'));
       else if (e === 'board-break') { toast(I.t('boardBroke')); flash(); }
       else if (e === 'board-on') toast(I.t('boardOn'));
-      else if (e === 'key') toast(I.t('keyFound'));
+      else if (e === 'key') {
+        // a found key goes into the stock at once: it can pay for a continue in this very run
+        // (run.keys - found and not yet put away, applyResult adds only those)
+        save.keys = Math.min(99999, save.keys + 1);
+        run.keys--;
+        persist();
+        toast(I.t('keyFound'));
+      }
       else if (e === 'crash') { state = 'dying'; deadT = 0; A.music(false); A.jet(false); flash(true); }
       else if (e.startsWith('power:')) { toast(I.t('p_' + e.slice(6))); flash(); if (e === 'power:jetpack') A.jet(true); }
       else if (e === 'power-end:jetpack') A.jet(false);
