@@ -4,7 +4,8 @@
 
 - Ramps to the trains were see-through: the slope's faces were wound inside out and were not drawn. / Пандусы к поездам были прозрачными: грани склона были вывернуты наизнанку и не рисовались.
 - The overhead wires hung at 5.85 m: on a train roof the camera sat right above the wire and the black wire covered the runner, a jump went through the wires. Now the catenary hangs at 10.2 m, above the runner, the jetpack and the camera. / Провода висели на 5,85 м: на крыше поезда камера оказывалась прямо над проводом, чёрный провод закрывал бегуна, прыжок проходил сквозь провода. Теперь контактная сеть на 10,2 м - выше бегуна, ранца и камеры.
-- Laws: the ramp's faces look outwards; the catenary is higher than the runner and the camera (roof, super jump from a roof, jetpack); 3 new mutants are caught. / Законы: грани пандуса смотрят наружу; провода выше бегуна и камеры; 3 новых мутанта пойманы.
+- In the tunnel the vault was too low (7.3 m): a super jump from a train roof put the camera inside the ceiling ribs (the whole screen went brown for a moment), and on the jetpack the camera flew above the tunnel roof - the runner was not seen at all for several seconds. Now the vault is at 10.9 m, above the wires, the runner and the camera. / В туннеле свод был слишком низко (7,3 м): суперпрыжок с крыши поезда загонял камеру в рёбра потолка (весь экран на миг становился коричневым), а на ранце камера вылетала над крышей туннеля - бегуна несколько секунд не было видно. Теперь свод на 10,9 м - выше проводов, бегуна и камеры.
+- Laws: the ramp's faces look outwards; the catenary and the tunnel vault are higher than the runner and the camera (roof, super jump from a roof, jetpack); 5 new mutants are caught. / Законы: грани пандуса смотрят наружу; провода и свод туннеля выше бегуна и камеры; 5 новых мутантов пойманы.
 
 ## 2.0.0 - 2026-10-17
 

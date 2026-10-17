@@ -836,3 +836,44 @@ test('провода: контактная сеть выше бегуна и к�
   expect(r.camMax).toBeLessThan(r.low - 0.3);
   expect(r.headMax).toBeLessThan(r.low - 0.3);
 });
+
+test('туннель: свод выше бегуна и камеры - на крыше, в суперпрыжке с крыши и на ранце', async ({ page }) => {
+  await open(page, '?manual=1&seed=7&district=tunnel');
+  await page.click('#m-play');
+  await clearWorld(page);
+  const r = await page.evaluate(() => {
+    const view = RailRunner.view, R = RailRunner.core, run = RailRunner.run, w = run.world;
+    // the lowest part of the vault and of the portal over the tracks: every triangle whose
+    // x range crosses the tracks (walls and pillars stand beside them)
+    const band = R.C.LANE_W + 1.2;
+    const low = (name) => {
+      const p = view.scene.getObjectByName(name).geometry.attributes.position.array;
+      let m = Infinity;
+      for (let i = 0; i < p.length; i += 9) {
+        const xs = [p[i], p[i + 3], p[i + 6]], ys = [p[i + 1], p[i + 4], p[i + 7]];
+        if (Math.max(...xs) < -band || Math.min(...xs) > band || Math.min(...ys) < 0.5) continue;
+        m = Math.min(m, Math.min(...ys));
+      }
+      return m;
+    };
+    const wires = view.scene.getObjectByName('catenary-wires');
+    wires.geometry.computeBoundingBox();
+    const o = { id: 990002, type: 'train', lane: 0, z0: run.z - 20, z1: run.z + 400, moving: false, cars: 40, color: 1, ridable: true, broken: false, passed: false, near: false };
+    const e = R.encounter(o); o.enc0 = e[0]; o.enc1 = e[1]; w.obstacles.push(o);
+    run.y = R.C.TRAIN_H; run.vy = 0;
+    let camMax = 0, headMax = 0, outside = 0;
+    const watch = (s) => { for (let i = 0; i < s * 60; i++) { RailRunner.advance(1 / 60); camMax = Math.max(camMax, view.camera.position.y); headMax = Math.max(headMax, run.y + R.C.PLAYER_H); if (run.district !== 'tunnel') outside++; } };
+    watch(1.5);
+    run.power.boots = 6; R.act(run, 'jump'); watch(1.6);
+    run.power.jetpack = 3; watch(3);
+    return { vault: low('tunnel-vault'), portal: low('tunnel-portal'), wiresTop: wires.geometry.boundingBox.max.y, camMax, headMax, outside, alive: run.alive };
+  });
+  expect(r.alive).toBe(true);
+  expect(r.outside).toBe(0);                        // the whole scenario was inside the tunnel
+  expect(r.camMax).toBeGreaterThan(8);              // and reached the jetpack height
+  for (const ceil of [r.vault, r.portal]) {
+    expect(ceil).toBeGreaterThan(r.camMax + 0.3);
+    expect(ceil).toBeGreaterThan(r.headMax + 0.3);
+    expect(ceil).toBeGreaterThan(r.wiresTop);       // the wires run under the vault, not through it
+  }
+});

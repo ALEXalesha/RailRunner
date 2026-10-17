@@ -17,6 +17,10 @@
   // camera sat 0.15 m above it and the black wire covered the runner, a jump went through it.
   const CATENARY_WIRE_Y = 10.2;
   const CATENARY_LOW = CATENARY_WIRE_Y - 0.05;   // the lowest part over the tracks (droppers)
+  // The tunnel vault (its ribs) is higher still: the wires run under it. In 2.0.0 the ribs were
+  // at 7.3 m - a super jump from a roof put the camera inside a rib (the screen went brown) and
+  // on a jetpack the camera flew above the tunnel roof, the runner was not seen at all.
+  const TUNNEL_LOW = CATENARY_WIRE_Y + 0.7;
 
   // ---------- looks: light and colours of every district (and the second lap's morning) ----------
   const LOOKS = {
@@ -289,18 +293,19 @@
     ];
     Gm.platform = G.merge(plat);
     // tunnel: walls, ceiling and a rib, one segment
+    const TV = TUNNEL_LOW;          // the ribs' bottom; the ceiling 0.5 m above it
     Gm.tunnel = G.merge([
-      G.box(1.2, 8, SEG, 0x8a8478, [-6.0, 4, 0]), G.box(1.2, 8, SEG, 0x8a8478, [6.0, 4, 0]),
-      G.box(13.2, 1.2, SEG, 0x7a746a, [0, 8.4, 0]),
-      G.box(0.6, 7.6, 0.8, 0x6a645a, [-5.3, 3.8, 0]), G.box(0.6, 7.6, 0.8, 0x6a645a, [5.3, 3.8, 0]), G.box(11.2, 0.6, 0.8, 0x6a645a, [0, 7.6, 0]),
+      G.box(1.2, TV + 1.7, SEG, 0x8a8478, [-6.0, (TV + 1.7) / 2, 0]), G.box(1.2, TV + 1.7, SEG, 0x8a8478, [6.0, (TV + 1.7) / 2, 0]),
+      G.box(13.2, 1.2, SEG, 0x7a746a, [0, TV + 1.1, 0]),
+      G.box(0.6, TV + 0.6, 0.8, 0x6a645a, [-5.3, (TV + 0.6) / 2, 0]), G.box(0.6, TV + 0.6, 0.8, 0x6a645a, [5.3, (TV + 0.6) / 2, 0]), G.box(11.2, 0.6, 0.8, 0x6a645a, [0, TV + 0.3, 0]),
       G.box(0.15, 0.25, SEG, 0x3a3a3a, [-5.25, 2.2, 0]), G.box(0.15, 0.25, SEG, 0x3a3a3a, [5.25, 2.2, 0]),
       G.box(0.1, 0.12, SEG, 0x2a2a2a, [-5.25, 2.6, 0]), G.box(0.1, 0.12, SEG, 0x2a2a2a, [5.25, 2.6, 0]),
     ]);
     // a portal: the hill face with an opening for the tracks
     Gm.portal = G.merge([
       G.box(40, 30, 6, 0x6f6a5f, [-25.6, 15, 3]), G.box(40, 30, 6, 0x6f6a5f, [25.6, 15, 3]),
-      G.box(11.2, 21, 6, 0x6f6a5f, [0, 19.5, 3]),
-      G.box(12.4, 1.2, 0.8, 0x9a948a, [0, 9.0, -0.2]), G.box(1.2, 9.6, 0.8, 0x9a948a, [-6.2, 4.8, -0.2]), G.box(1.2, 9.6, 0.8, 0x9a948a, [6.2, 4.8, -0.2]),
+      G.box(11.2, 30 - (TV + 0.6), 6, 0x6f6a5f, [0, (30 + TV + 0.6) / 2, 3]),
+      G.box(12.4, 1.2, 0.8, 0x9a948a, [0, TV + 0.6, -0.2]), G.box(1.2, TV + 1.2, 0.8, 0x9a948a, [-6.2, (TV + 1.2) / 2, -0.2]), G.box(1.2, TV + 1.2, 0.8, 0x9a948a, [6.2, (TV + 1.2) / 2, -0.2]),
       G.box(90, 12, 30, 0x4f6b3a, [0, 32, 18], null, {}), G.box(70, 10, 30, 0x5a7a40, [0, 40, 30]),
     ]);
     // bridge: truss on one side of a segment and the deck
@@ -413,6 +418,8 @@
     const wireMesh = new THREE.Mesh(G.merge(wires), new THREE.MeshBasicMaterial({ vertexColors: true }));
     wireMesh.name = 'catenary-wires';
     P.gantry.mesh.name = 'catenary-gantry';
+    P.tunnel.mesh.name = 'tunnel-vault';
+    P.portal.mesh.name = 'tunnel-portal';
     track.add(wireMesh);
     const SLEEPER_STEP = 1.1, SLEEPERS = Math.ceil((opts.ahead + opts.behind + 10) / SLEEPER_STEP);
     const sleepers = new THREE.InstancedMesh(new THREE.BoxGeometry(1.75, 0.08, 0.24), mats.sleeper, SLEEPERS * 3);
