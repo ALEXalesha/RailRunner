@@ -1,6 +1,6 @@
 # Changelog / Журнал изменений
 
-## 2.0.1 - не выпущено / unreleased
+## 2.0.1 - 2026-10-17
 
 - Ramps to the trains were see-through: the slope's faces were wound inside out and were not drawn. / Пандусы к поездам были прозрачными: грани склона были вывернуты наизнанку и не рисовались.
 - The overhead wires hung at 5.85 m: on a train roof the camera sat right above the wire and the black wire covered the runner, a jump went through the wires. Now the catenary hangs at 10.2 m, above the runner, the jetpack and the camera. / Провода висели на 5,85 м: на крыше поезда камера оказывалась прямо над проводом, чёрный провод закрывал бегуна, прыжок проходил сквозь провода. Теперь контактная сеть на 10,2 м - выше бегуна, ранца и камеры.
