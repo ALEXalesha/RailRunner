@@ -12,7 +12,7 @@ const pageUrl = (query = '') => pathToFileURL(path.join(WEB, 'index.html')).href
 // so the laws are not slowed down by lessons); fresh: true - nothing in storage.
 async function open(page, query = '?manual=1&seed=7', opts = {}) {
   const errors = [];
-  const save = opts.fresh ? null : JSON.stringify(Object.assign({ v: 2, tutorialDone: true }, opts.save || {}));
+  const save = opts.fresh ? null : JSON.stringify(Object.assign({ v: 2, tutorialDone: true, boardGift: true }, opts.save || {}));
   await page.addInitScript((save) => {
     window.__pointerLockCalls = 0;
     Element.prototype.requestPointerLock = function () { window.__pointerLockCalls++; };
@@ -55,7 +55,7 @@ async function clearWorld(page) {
 async function obstacleAhead(page, type = 'hurdle', dz = 20) {
   await page.evaluate(([type, dz]) => {
     const r = RailRunner.run, R = RailRunner.core;
-    const len = { hurdle: 0.3, bar: 0.4, fence: 0.35, pit: R.C.PIT_LEN, train: 9 }[type];
+    const len = { hurdle: R.C.HURDLE_D, bar: R.C.BAR_D, fence: R.C.FENCE_D, pit: R.C.PIT_LEN, train: 9 }[type];
     const o = { id: 900000 + Math.floor(Math.random() * 99999), type, lane: r.lane, z0: r.z + dz, z1: r.z + dz + len, moving: false, broken: false, passed: false, near: false, cars: 1, color: 0 };
     const e = R.encounter(o); o.enc0 = e[0]; o.enc1 = e[1];
     r.world.obstacles.push(o);

@@ -11,6 +11,7 @@
   'use strict';
 
   const SAVE_VERSION = 2;
+  const GIFT_BOARDS = 3;        // a new player starts with three hoverboards (2.0.2: older saves get them once)
 
   // ---------- the catalog ----------
   // Characters: body proportions, colours and what they wear (render.js builds them).
@@ -239,7 +240,7 @@
   }
   function defaultSave() {
     return {
-      v: SAVE_VERSION, best: 0, bestDistance: 0, coins: 0, keys: 0, boards: 0, runs: 0, totalCoins: 0,
+      v: SAVE_VERSION, best: 0, bestDistance: 0, coins: 0, keys: 0, boards: GIFT_BOARDS, boardGift: true, runs: 0, totalCoins: 0,
       upgrades: { magnet: 0, x2: 0, boots: 0, board: 0, jetpack: 0 },
       owned: { chars: ['kit'], boards: ['basic'] },
       char: 'kit',
@@ -272,6 +273,8 @@
     d.coins = int(src.coins, 0, 0, 1e9);
     d.keys = int(src.keys, 0, 0, 99999);
     d.boards = int(src.boards, 0, 0, 99999);
+    // a save from before 2.0.2 gets its hoverboards topped up to three, once: the mark stays
+    if (src.boardGift !== true) d.boards = Math.max(d.boards, GIFT_BOARDS);
     d.runs = int(src.runs, 0, 0, 1e9);
     d.totalCoins = int(src.totalCoins, 0, 0, 1e12);
     if (isObj(src.upgrades)) for (const k of R.POWERS) d.upgrades[k] = int(src.upgrades[k], 0, 0, R.MAX_LEVEL);
@@ -408,7 +411,7 @@
   }
 
   return {
-    SAVE_VERSION, CHARS, BOARDS, ITEMS, MAX_MULT, MISSIONS, MISSION_IDS, ACHIEVEMENTS, ACH_REWARD, STAT_KEYS, DEATHS,
+    SAVE_VERSION, GIFT_BOARDS, CHARS, BOARDS, ITEMS, MAX_MULT, MISSIONS, MISSION_IDS, ACHIEVEMENTS, ACH_REWARD, STAT_KEYS, DEATHS,
     THEMES, LANGS, QUALITIES, PARTICLES, BEST_RUNS, DAILY_GOALS,
     missionSet, missionTarget, missionReward, missionTier, missionView, commitMissions, runValues, skipCost, skipMission,
     dailyFor, dailyValue, completeDaily, dateKey, prevDay, hashStr,

@@ -72,7 +72,7 @@ test('сохранение: мусор и испорченные поля ста
   assert.equal(s.coins, 1e9);
   assert.equal(s.runs, 3);
   assert.equal(s.keys, 0);
-  assert.equal(s.boards, 0);
+  assert.equal(s.boards, M.GIFT_BOARDS, 'испорченное число досок - подарок в 3 доски');
   assert.deepEqual(s.upgrades, { magnet: 5, x2: 0, boots: 0, board: 0, jetpack: 2 });
   assert.deepEqual(s.owned.chars, ['kit', 'mila']);
   assert.deepEqual(s.owned.boards, ['basic']);
@@ -157,6 +157,34 @@ test('магазин: улучшения - длительность растёт
   assert.equal(M.buyUpgrade(s, 'nope').ok, false);
 });
 
+test('подарок: новый игрок начинает с 3 досками; старое сохранение получает до 3 один раз, без повторов', () => {
+  // новый профиль
+  const d = M.defaultSave();
+  assert.equal(M.GIFT_BOARDS, 3);
+  assert.equal(d.boards, 3);
+  assert.equal(M.sanitizeSave(null).boards, 3, 'пустое хранилище');
+  assert.equal(M.sanitizeSave(JSON.stringify(d)).boards, 3);
+  // сохранение 2.0.0 / 2.0.1 (без отметки): досок меньше 3 - до 3, больше - не трогаем
+  for (const [had, got] of [[0, 3], [1, 3], [2, 3], [3, 3], [7, 7]]) {
+    const s = M.sanitizeSave(JSON.stringify({ v: 2, boards: had, runs: 5, coins: 40, tutorialDone: true }));
+    assert.equal(s.boards, got, had + ' -> ' + got);
+    assert.equal(s.boardGift, true, 'отметка о подарке');
+    assert.equal(s.coins, 40);
+  }
+  // сохранение 1.0 тоже
+  assert.equal(M.sanitizeSave(JSON.stringify({ best: 10, coins: 5, runs: 2 })).boards, 3);
+  // потратил подарок - после перезапуска не возвращается (сколько угодно перезапусков)
+  let s = M.sanitizeSave(JSON.stringify({ v: 2, boards: 0, runs: 5 }));
+  s.boards = 1;                                     // одна осталась после забега
+  for (let i = 0; i < 3; i++) s = M.sanitizeSave(JSON.stringify(s));
+  assert.equal(s.boards, 1, 'подарок один раз');
+  s.boards = 0;
+  assert.equal(M.sanitizeSave(JSON.stringify(s)).boards, 0);
+  // новый игрок тоже не получает второй раз
+  const n = M.defaultSave(); n.boards = 0;
+  assert.equal(M.sanitizeSave(JSON.stringify(n)).boards, 0);
+});
+
 test('магазин: ключи и доски поштучно', () => {
   const s = M.defaultSave();
   s.coins = M.ITEMS.key + M.ITEMS.hoverboard * 2;
@@ -164,7 +192,7 @@ test('магазин: ключи и доски поштучно', () => {
   assert.equal(M.buyItem(s, 'hoverboard').ok, true);
   assert.equal(M.buyItem(s, 'hoverboard').ok, true);
   assert.equal(M.buyItem(s, 'hoverboard').reason, 'coins');
-  assert.deepEqual([s.keys, s.boards, s.coins], [1, 2, 0]);
+  assert.deepEqual([s.keys, s.boards, s.coins], [1, M.GIFT_BOARDS + 2, 0]);
   assert.equal(M.buyItem(s, 'gold').ok, false);
 });
 

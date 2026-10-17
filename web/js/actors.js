@@ -117,29 +117,31 @@
   }
 
   // ---------- obstacles ----------
+  // Each model sits inside its hitbox along the track: z from 0 to C.HURDLE_D / BAR_D /
+  // FENCE_D (the law «хитбоксы» checks the boxes against core.js).
   function obstacleGeos() {
     const g = {};
     const h = [];
     for (const sx of [-0.85, 0.85]) {
-      h.push(G.box(0.1, K.HURDLE_H, 0.1, 0x9aa2ac, [sx, K.HURDLE_H / 2, 0.15]));
-      h.push(G.box(0.12, 0.06, 0.55, 0x6a7078, [sx, 0.03, 0.15]));
+      h.push(G.box(0.1, K.HURDLE_H, 0.1, 0x9aa2ac, [sx, K.HURDLE_H / 2, K.HURDLE_D / 2]));
+      h.push(G.box(0.12, 0.06, 0.55, 0x6a7078, [sx, 0.03, K.HURDLE_D / 2]));
     }
-    for (const y of [0.5, 0.82]) for (let i = 0; i < 6; i++) h.push(G.box(0.3, 0.24, 0.07, i % 2 ? 0xffffff : 0xd8342a, [-0.75 + i * 0.3, y, 0.1]));
+    for (const y of [0.5, 0.82]) for (let i = 0; i < 6; i++) h.push(G.box(0.3, 0.24, 0.07, i % 2 ? 0xffffff : 0xd8342a, [-0.75 + i * 0.3, y, K.HURDLE_D / 2]));
     g.hurdle = G.merge(h);
     const b = [];
     for (const sx of [-0.98, 0.98]) {
-      b.push(G.box(0.14, K.BAR_TOP + 0.35, 0.14, 0x9aa2ac, [sx, (K.BAR_TOP + 0.35) / 2, 0.2]));
-      b.push(G.box(0.3, 0.08, 0.6, 0x6a7078, [sx, 0.04, 0.2]));
-      b.push(G.box(0.12, 0.12, 0.12, 0x333333, [sx, K.BAR_TOP + 0.42, 0.2]));
+      b.push(G.box(0.14, K.BAR_TOP + 0.35, 0.14, 0x9aa2ac, [sx, (K.BAR_TOP + 0.35) / 2, K.BAR_D / 2]));
+      b.push(G.box(0.3, 0.08, 0.6, 0x6a7078, [sx, 0.04, K.BAR_D / 2]));
+      b.push(G.box(0.12, 0.12, 0.12, 0x333333, [sx, K.BAR_TOP + 0.42, K.BAR_D / 2]));
     }
     g.barFrame = G.merge(b);
-    g.barSign = G.box(1.84, K.BAR_TOP - K.BAR_BOTTOM, 0.25, 0xffffff, [0, (K.BAR_TOP + K.BAR_BOTTOM) / 2, 0.2]);
+    g.barSign = G.box(1.84, K.BAR_TOP - K.BAR_BOTTOM, 0.25, 0xffffff, [0, (K.BAR_TOP + K.BAR_BOTTOM) / 2, K.BAR_D / 2]);
     const f = [];
-    for (const sx of [-0.92, 0, 0.92]) f.push(G.box(0.08, K.FENCE_H, 0.08, 0x8a9096, [sx, K.FENCE_H / 2, 0.18]));
-    for (const sx of [-0.92, 0.92]) f.push(G.box(0.5, 0.06, 0.5, 0x6a7078, [sx, 0.03, 0.18]));
-    for (const y of [0.1, K.FENCE_H - 0.05]) for (let i = 0; i < 6; i++) f.push(G.box(0.31, 0.1, 0.06, i % 2 ? 0xffffff : 0xd8342a, [-0.775 + i * 0.31, y, 0.18]));
+    for (const sx of [-0.92, 0, 0.92]) f.push(G.box(0.08, K.FENCE_H, 0.08, 0x8a9096, [sx, K.FENCE_H / 2, K.FENCE_D / 2]));
+    for (const sx of [-0.92, 0.92]) f.push(G.box(0.5, 0.06, 0.5, 0x6a7078, [sx, 0.03, K.FENCE_D / 2]));
+    for (const y of [0.1, K.FENCE_H - 0.05]) for (let i = 0; i < 6; i++) f.push(G.box(0.31, 0.1, 0.06, i % 2 ? 0xffffff : 0xd8342a, [-0.775 + i * 0.31, y, K.FENCE_D / 2]));
     g.fenceFrame = G.merge(f);
-    g.fenceNet = G.part(new THREE.PlaneGeometry(1.84, K.FENCE_H - 0.15), 0xffffff, { p: [0, K.FENCE_H / 2, 0.18], r: [0, Math.PI, 0] });
+    g.fenceNet = G.part(new THREE.PlaneGeometry(1.84, K.FENCE_H - 0.15), 0xffffff, { p: [0, K.FENCE_H / 2, K.FENCE_D / 2], r: [0, Math.PI, 0] });
     const p = [];
     p.push(G.box(1.5, 0.05, K.PIT_LEN - 0.2, 0x0b0b0d, [0, 0.165, K.PIT_LEN / 2]));
     p.push(G.box(1.42, 0.6, K.PIT_LEN - 0.3, 0x1a1a1e, [0, -0.15, K.PIT_LEN / 2]));
@@ -330,7 +332,7 @@
         } else if (o.type === 'hurdle') pools.hurdle.add(x, 0, a);
         else if (o.type === 'bar') {
           pools.barFrame.add(x, 0, a); pools.barSign.add(x, 0, a);
-          if (Math.floor(t * 3) % 2 === 0) { pools.warn.add(x - 0.98, K.BAR_TOP + 0.5, a + 0.2); pools.warn.add(x + 0.98, K.BAR_TOP + 0.5, a + 0.2); }
+          if (Math.floor(t * 3) % 2 === 0) { pools.warn.add(x - 0.98, K.BAR_TOP + 0.5, a + K.BAR_D / 2); pools.warn.add(x + 0.98, K.BAR_TOP + 0.5, a + K.BAR_D / 2); }
         } else if (o.type === 'fence') { pools.fenceFrame.add(x, 0, a); pools.fenceNet.add(x, 0, a); }
         else if (o.type === 'pit') {
           pools.pit.add(x, 0, a); pools.pitRim.add(x, 0, a);
@@ -687,5 +689,5 @@
     return grp;
   }
 
-  root.RRActors = { createWorldActors, createRunner, pose, createBoard, PASSENGER, FREIGHT };
+  root.RRActors = { createWorldActors, createRunner, pose, createBoard, obstacleGeos, PASSENGER, FREIGHT };
 })(typeof self !== 'undefined' ? self : this);

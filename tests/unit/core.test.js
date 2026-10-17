@@ -291,6 +291,117 @@ test('перекладина: бег - авария, подкат - проход
   assert.equal(run.alive, false);
 });
 
+// исход прыжка или увода в сторону, нажатого за d метров до препятствия: 'clean', 'knock' (ушиб) или 'crash'
+function outcome(o, action, d, from = 0) {
+  const run = bare();
+  run.z = o.z0 - 40;
+  if (from) { run.lane = from; run.x = R.laneX(from); }
+  place(run, o);
+  runTo(run, o.z1 + 4, pressAt(o.z0 - d, action));
+  return run.alive ? (run.stats.bumps ? 'knock' : 'clean') : 'crash';
+}
+// полосы исходов по d (шаг 1 см): [[исход, от, до], ...]
+function bands(o, action, d0, d1, from) {
+  const out = [];
+  for (let d = d0; d <= d1 + 1e-9; d += 0.01) {
+    const r = outcome(Object.assign({}, o), action, d, from);
+    const last = out[out.length - 1];
+    if (last && last[0] === r) last[2] = d; else out.push([r, d, d]);
+  }
+  return out;
+}
+
+test('барьер задет краем (до 10 % высоты) - ушиб, а не авария; глубже или в лоб - авария', () => {
+  for (const z0 of [30, 2000, 4300]) {
+    const v = R.speedAt(z0);
+    const b = bands({ type: 'hurdle', lane: 0, z0, z1: z0 + C.HURDLE_D }, 'jump', 0, v * 0.6);
+    const names = b.map((x) => x[0]).join(' ');
+    // слишком поздно - авария, чуть поздно - ушиб носками о верх, вовремя - чисто,
+    // слишком рано - ушиб о край при приземлении, совсем рано - авария
+    assert.equal(names, 'crash knock clean knock crash', 'v=' + v.toFixed(1) + ': ' + JSON.stringify(b));
+    for (const k of [b[1], b[3]]) {
+      const ms = (k[2] - k[1] + 0.01) / v * 1000;
+      assert.ok(ms >= 8 && ms <= 60, 'полоса ушиба ' + ms.toFixed(0) + ' мс при v=' + v.toFixed(1));
+    }
+    const clean = (b[2][2] - b[2][1] + 0.01) / v;
+    assert.ok(clean > 0.3, 'окно чистого прыжка ' + clean.toFixed(3) + ' с');
+  }
+  // глубина ушиба: на поздней полосе носки ниже верха барьера не больше чем на 10 %
+  const z0 = 30;
+  const b = bands({ type: 'hurdle', lane: 0, z0, z1: z0 + C.HURDLE_D }, 'jump', 0, 8);
+  const run = bare();
+  run.z = z0 - 40;
+  place(run, { type: 'hurdle', lane: 0, z0, z1: z0 + C.HURDLE_D });
+  let minY = Infinity;
+  const press = pressAt(z0 - b[1][1], 'jump');
+  runTo(run, z0 + 3, (r) => {
+    press(r);
+    if (r.z + C.PLAYER_HALF_D > z0 && r.z - C.PLAYER_HALF_D < z0 + C.HURDLE_D) minY = Math.min(minY, r.y);
+  });
+  assert.ok(run.alive);
+  assert.ok(C.HURDLE_H - minY > 0 && C.HURDLE_H - minY <= C.GRAZE * C.HURDLE_H + 1e-9, 'задел на ' + (C.HURDLE_H - minY).toFixed(3) + ' м');
+});
+
+// два барьера: ушиб о первый (нажатие за late м), второй через gap м прыгается за d м до него
+function twoHurdles(late, gap, d) {
+  const z0 = 30;
+  const run = bare();
+  run.z = z0 - 40;
+  place(run, { type: 'hurdle', lane: 0, z0, z1: z0 + C.HURDLE_D });
+  place(run, { type: 'hurdle', lane: 0, z0: z0 + gap, z1: z0 + gap + C.HURDLE_D });
+  runTo(run, z0 + gap + 4, all(pressAt(z0 - late, 'jump'), pressAt(z0 + gap - d, 'jump')));
+  return run;
+}
+
+test('ушиб: спотыкание, комбо сброшено; второй ушиб за время спотыкания - авария, после - снова ушиб', () => {
+  const z0 = 30;
+  const late = bands({ type: 'hurdle', lane: 0, z0, z1: z0 + C.HURDLE_D }, 'jump', 0, 8)[1][1];
+  const v = R.speedAt(z0);
+  // сам ушиб (и доска при этом цела: ушиб - не авария)
+  for (const board of [0, 30]) {
+    const one = bare();
+    one.z = z0 - 40;
+    one.power.board = board;
+    one.combo = 3; one.comboT = 3;
+    place(one, { type: 'hurdle', lane: 0, z0, z1: z0 + C.HURDLE_D });
+    runTo(one, z0 + 2, pressAt(z0 - late, 'jump'));
+    assert.ok(one.alive && one.events.includes('bump'), 'ушиб');
+    assert.ok(one.stumbleT > 0, 'спотыкается');
+    assert.equal(one.combo, 0, 'комбо сброшено');
+    assert.equal(one.power.board > 0, board > 0, 'доска не тратится');
+  }
+
+  // второй барьер через секунду (ещё спотыкается): чисто - можно, задеть - авария
+  const gap = v * 1.0;
+  const res = new Set();
+  for (let d = 0; d <= v * 0.6; d += 0.01) {
+    const r = twoHurdles(late, gap, d);
+    res.add(r.alive ? 'alive' + r.stats.bumps : 'crash');
+  }
+  assert.ok(res.has('alive1'), 'второй барьер можно перепрыгнуть чисто');
+  assert.ok(!res.has('alive2'), 'второго ушиба за время спотыкания нет - только авария');
+
+  // через STUMBLE_TIME + 0,5 с тот же ушиб - снова только ушиб
+  const far = v * (C.STUMBLE_TIME + 0.5);
+  let again = false;
+  for (let d = 0; d <= R.speedAt(z0 + far) * 0.6 && !again; d += 0.01) {
+    const r = twoHurdles(late, far, d);
+    if (r.alive && r.stats.bumps === 2) again = true;
+  }
+  assert.ok(again, 'после спотыкания снова ушиб, а не авария');
+});
+
+test('угол задет при уходе в сторону (до 10 % ширины) - ушиб; позже - авария', () => {
+  for (const type of ['hurdle', 'train', 'fence']) {
+    const z0 = 30;
+    const z1 = z0 + (type === 'train' ? 9 : type === 'fence' ? C.FENCE_D : C.HURDLE_D);
+    const b = bands({ type, lane: 0, z0, z1, cars: 1 }, 'left', 0, 4);
+    assert.equal(b.map((x) => x[0]).join(' '), 'crash knock clean', type + ': ' + JSON.stringify(b));
+    const ms = (b[1][2] - b[1][1] + 0.01) / R.speedAt(z0) * 1000;
+    assert.ok(ms >= 8 && ms <= 40, type + ': полоса ушиба ' + ms.toFixed(0) + ' мс');
+  }
+});
+
 test('поезд: в лоб - авария; по пандусу - на крышу, в конце спрыгивает на землю', () => {
   let run = bare();
   place(run, { type: 'train', lane: 0, z0: 30, z1: 39, cars: 1 });

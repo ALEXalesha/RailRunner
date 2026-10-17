@@ -184,6 +184,51 @@ test('пауза: P, Esc и кнопка; на паузе мир стоит; п�
   }
 });
 
+test('монеты забега: продолжение (пауза, настройки, потеря фокуса, продолжение за ключ и за монеты) их не теряет; в итогах они в банке', async ({ page }) => {
+  await open(page, '?manual=1&seed=7', { save: { keys: 1, coins: 1000 } });
+  await page.click('#m-play');
+  await advance(page, 8, true);
+  const coins = () => page.evaluate(() => [RailRunner.run.coins, Number(document.getElementById('hud-coins').textContent)]);
+  let [had] = await coins();
+  expect(had).toBeGreaterThan(5);
+  const same = async (what) => {
+    const [run, hud] = await coins();
+    expect(run, what).toBeGreaterThanOrEqual(had);
+    expect(hud, what + ': HUD').toBe(run);
+    had = run;
+  };
+  await page.keyboard.press('Escape'); await same('пауза');
+  await page.click('#p-resume'); await advance(page, 2); await same('«Продолжить»');
+  await page.keyboard.press('KeyP'); await page.click('#p-settings'); await page.click('#s-done'); await same('пауза - настройки - назад');
+  await page.keyboard.press('KeyP'); await advance(page, 2); await same('P после настроек');
+  await page.evaluate(() => window.dispatchEvent(new Event('blur'))); await same('потеря фокуса');
+  await page.keyboard.press('Escape'); await advance(page, 2); await same('Esc');
+  // авария - продолжение за ключ
+  await clearWorld(page); await obstacleAhead(page, 'hurdle');
+  expect(await advanceUntil(page, ['continue', 'over'], 20)).toBe('continue');
+  await same('авария');
+  await page.click('#c-keys'); await advance(page, 2); await same('продолжение за ключ');
+  // вторая авария - ключей нет, докупить за монеты банка
+  await advance(page, 3);
+  await obstacleAhead(page, 'hurdle', 40);
+  expect(await advanceUntil(page, ['continue', 'over'], 20)).toBe('continue');
+  await same('вторая авария');
+  const bank = await page.evaluate(() => RailRunner.save.coins);
+  await page.click('#c-buy'); await advance(page, 2); await same('продолжение за монеты');
+  const paid = bank - (await page.evaluate(() => RailRunner.save.coins));
+  expect(paid).toBe(2 * 500);
+  // итоги (на третье продолжение монет уже не хватает): монеты забега пришли в банк целиком
+  await advance(page, 3);
+  const bank2 = await page.evaluate(() => RailRunner.save.coins);
+  await obstacleAhead(page, 'hurdle', 40);
+  expect(await advanceUntil(page, ['continue', 'over'], 20)).toBe('over');
+  const runCoins = (await coins())[0];
+  expect(runCoins).toBeGreaterThanOrEqual(had);
+  await expect(page.locator('#o-coins')).toHaveText(String(runCoins));
+  const gain = (await page.evaluate(() => RailRunner.save.coins)) - bank2;
+  expect(gain, 'в банк пришли монеты забега (и награды)').toBeGreaterThanOrEqual(runCoins);
+});
+
 test('скрытая вкладка и потеря фокуса ставят паузу', async ({ page }) => {
   await open(page);
   await page.click('#m-play');
@@ -627,6 +672,72 @@ test('доска по кнопке на экране: тратит одну из
   await obstacleAhead(page, 'hurdle');
   expect(await advanceUntil(page, ['continue', 'over'], 20)).toBe('over');
   expect(await page.evaluate(() => RailRunner.save.boards)).toBe(1);
+});
+
+test('подарок: новый игрок начинает с 3 досками', async ({ page }) => {
+  await open(page, '?manual=1&seed=7', { fresh: true });
+  expect(await page.evaluate(() => RailRunner.save.boards)).toBe(3);
+  await page.click('#m-play');
+  await expect(page.locator('#hud-boards')).toHaveText('3');
+});
+
+test('подарок досок старому сохранению: один раз', async ({ page }) => {
+  await open(page, '?manual=1&seed=7', { save: { boards: 1, boardGift: false, runs: 4 } });
+  expect(await page.evaluate(() => RailRunner.save.boards)).toBe(3);
+  await page.click('#m-play');
+  await expect(page.locator('#hud-boards')).toHaveText('3');
+  await clearWorld(page);
+  await page.click('#btn-board');
+  await advance(page, 0.5);
+  await expect(page.locator('#hud-boards')).toHaveText('2');
+  // the board runs out, then a crash: the results put the rest (2) into the save
+  await page.evaluate(() => { RailRunner.run.power.board = 0; });
+  await advance(page, 0.5);
+  await obstacleAhead(page, 'fence', 40);
+  expect(await advanceUntil(page, ['continue', 'over'], 30)).toBe('over');
+  expect(await page.evaluate(() => RailRunner.save.boards)).toBe(2);
+  await reload(page);
+  expect(await page.evaluate(() => RailRunner.save.boards), 'после перезапуска подарка нет').toBe(2);
+});
+
+test('хитбоксы: барьер, перекладина и ограждение не больше видимой модели (и модель не вылезает за хитбокс по ходу)', async ({ page }) => {
+  await open(page);
+  const r = await page.evaluate(() => {
+    const K = RailRunner.core.C, R = RailRunner.core;
+    const OG = RRActors.obstacleGeos();
+    const box = (geos, minY) => {
+      const b = { x: 0, y0: Infinity, y1: -Infinity, z0: Infinity, z1: -Infinity };
+      for (const g of geos) {
+        const p = g.attributes.position.array;
+        for (let i = 0; i < p.length; i += 3) {
+          if (p[i + 1] < minY) continue;              // the foot plates on the ground (6-8 cm)
+          b.x = Math.max(b.x, Math.abs(p[i])); b.y0 = Math.min(b.y0, p[i + 1]); b.y1 = Math.max(b.y1, p[i + 1]);
+          b.z0 = Math.min(b.z0, p[i + 2]); b.z1 = Math.max(b.z1, p[i + 2]);
+        }
+      }
+      return b;
+    };
+    const hw = R.halfW({ type: 'hurdle' });
+    return {
+      hurdle: { m: box([OG.hurdle], 0.09), h: { x: hw, y0: 0, y1: K.HURDLE_H, d: K.HURDLE_D } },
+      bar: { m: box([OG.barSign], 0.09), h: { x: hw, y0: K.BAR_BOTTOM, y1: K.BAR_TOP, d: K.BAR_D }, frame: box([OG.barFrame], 0.09) },
+      fence: { m: box([OG.fenceFrame, OG.fenceNet], 0.09), h: { x: hw, y0: 0, y1: K.FENCE_H, d: K.FENCE_D } },
+    };
+  });
+  const tol = 0.021;
+  for (const [name, { m, h }] of Object.entries(r)) {
+    // the hitbox is not bigger than what is seen (2 cm at most)
+    expect(m.x, name + ': ширина модели').toBeGreaterThanOrEqual(h.x - tol);
+    expect(m.y1, name + ': верх модели').toBeGreaterThanOrEqual(h.y1 - tol);
+    expect(m.z0, name + ': перед модели').toBeLessThanOrEqual(tol);
+    expect(m.z1, name + ': зад модели').toBeGreaterThanOrEqual(h.d - tol);
+    // and the model stays inside it along the track
+    expect(m.z0, name).toBeGreaterThanOrEqual(-1e-6);
+    expect(m.z1, name).toBeLessThanOrEqual(h.d + 1e-6);
+  }
+  expect(r.bar.m.y0).toBeLessThanOrEqual(r.bar.h.y0 + tol);
+  expect(r.bar.frame.z0).toBeGreaterThanOrEqual(-1e-6);
+  expect(r.bar.frame.z1).toBeLessThanOrEqual(r.bar.h.d + 1e-6);
 });
 
 test('HUD: ускорители с полосками времени, x2 удваивает множитель, комбо и трюки видны, смена района - надпись', async ({ page }) => {

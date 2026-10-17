@@ -42,9 +42,9 @@
     TRAIN_H: 3.0,
     TRAIN_HALF_W: 0.95,
     SMALL_HALF_W: 0.9,          // hurdles, bars and fences
-    HURDLE_D: 0.3,
-    BAR_D: 0.4,
-    FENCE_D: 0.35,
+    HURDLE_D: 0.1,              // depths along the track = the visible models (actors.js)
+    BAR_D: 0.25,
+    FENCE_D: 0.1,
     PIT_LEN: 3.2,               // a repair pit: the rails are gone, jump over it
     PIT_HALF_W: 0.7,            // the player's centre this close to the lane falls in
     PIT_DEPTH: 0.6,             // deeper than this in a pit - the run is over
@@ -59,6 +59,7 @@
     MAGNET_RANGE: 9,
     INVULN: 1.2,
     STUMBLE_TIME: 2.5,
+    GRAZE: 0.1,                 // touched by no more than 10 % of the obstacle's height or width: a knock, not a crash
     COIN_POINTS: 10,
     JET_Y: 7.2,                 // the jetpack flies this high (over trains and wires)
     JET_RATE: 4,                // how fast it climbs to that height (1/s)
@@ -518,6 +519,7 @@
       slideBuf: false,
       jumpBuf: 0,
       stumbleT: 0,
+      graze: null,              // id of the obstacle the player is brushing past right now
       invulnT: 0,
       alive: true,
       deathBy: null,
@@ -654,6 +656,25 @@
     return z + C.PLAYER_HALF_D > a && z - C.PLAYER_HALF_D < b;
   }
 
+  // a knock: the player stumbles for a while, the next knock in that time is a crash
+  function stumble(run) {
+    run.stumbleT = C.STUMBLE_TIME;
+    run.combo = 0;
+    run.comboT = 0;
+    run.stats.bumps++;
+    run.events.push('bump');
+  }
+  // How deep the player is in the obstacle, as a share of its size: the smaller way out -
+  // up over its top, down under its bottom or sideways past its edge. A late jump that
+  // catches the top of a hurdle with the toes, a late dodge that clips a corner: a few per cent.
+  function grazeDepth(run, o, bot, top, h) {
+    const H = isSupport(o) ? C.TRAIN_H : top - bot;
+    const W = 2 * halfW(o);
+    const up = (top - run.y) / H, down = (run.y + h - bot) / H;
+    const side = (C.PLAYER_HALF_W + halfW(o) - Math.abs(run.x - laneX(o.lane))) / W;
+    return Math.min(up, down, side);
+  }
+
   function hit(run, o, lateral, prevX) {
     if (run.invulnT > 0) return;
     if (lateral && run.stumbleT <= 0) {
@@ -661,11 +682,7 @@
       // last key press - after two quick presses across a train that would be the train's
       // own lane), stumbling for a while
       run.lane = Math.max(-1, Math.min(1, Math.round(prevX / C.LANE_W)));
-      run.stumbleT = C.STUMBLE_TIME;
-      run.combo = 0;
-      run.comboT = 0;
-      run.stats.bumps++;
-      run.events.push('bump');
+      stumble(run);
       return 'bump';
     }
     if (run.power.board > 0) {
@@ -687,6 +704,7 @@
 
   function collide(run, near, prevX, prevZ) {
     const h = playerH(run);
+    let brushing = null;
     for (const o of near) {
       if (o.broken || !run.alive || o.type === 'pit') continue;
       if (!overlapsX(run.x, o) || !overlapsZ(run.z, o, run.z)) continue;
@@ -697,8 +715,24 @@
       if (run.y >= top - standOn) continue;          // above it, or on its roof
       if (run.y + h <= bot) continue;                // under it (a bar)
       const lateral = !overlapsX(prevX, o) && overlapsZ(prevZ, o, prevZ);
+      // only touched it with an edge: the player brushes past, and if it stays that shallow
+      // to the end, it is a knock (see below). Deeper at any moment - a crash. A second
+      // knock while still stumbling - a crash too.
+      if (!lateral && run.invulnT <= 0 && grazeDepth(run, o, bot, top, h) <= C.GRAZE &&
+          (run.graze === o.id || (run.graze === null && run.stumbleT <= 0))) {
+        run.graze = o.id;
+        brushing = o.id;
+        continue;
+      }
       const res = hit(run, o, lateral, prevX);
       if (res === 'bump') { run.x = prevX; return; }
+    }
+    // past the obstacle it brushed (and it was not broken by the board meanwhile): a knock,
+    // and no trick for it
+    if (run.graze !== null && brushing !== run.graze) {
+      const g = near.find((o) => o.id === run.graze);
+      if (run.alive && !(g && g.broken)) { stumble(run); if (g) g.passed = true; }
+      run.graze = null;
     }
     // fell into a pit
     if (run.alive && run.y < -C.PIT_DEPTH) {
@@ -900,6 +934,7 @@
     run.revives++;
     run.invulnT = C.REVIVE_INV;
     run.stumbleT = 0;
+    run.graze = null;
     run.slideT = 0;
     run.queue.length = 0;
     run.lane = Math.max(-1, Math.min(1, Math.round(run.x / C.LANE_W)));
