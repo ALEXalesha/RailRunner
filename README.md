@@ -95,7 +95,7 @@ each power-up is a bar in the top left corner.
   and turns around.
 - Hoverboards: Classic, Flame, Wave, Stars, Neon, Gold.
 - Power-up upgrades, keys (500 coins) and spare hoverboards (200 coins). A new player starts with
-  three hoverboards.
+  three hoverboards. The start menu shows the stock of hoverboards next to the coins and keys.
 
 ### More
 
@@ -152,9 +152,9 @@ tools/mutate.js     testing the tests: breaks the rules one by one, the laws mus
 ```
 npm ci
 npm test            # 65 laws of the rules and the progress, ~40 s
-npm run test:web    # 38 page scenarios, ~20 min
+npm run test:web    # 39 page scenarios, ~20 min
 npm run test:app    # 3 app laws, ~1 min
-npm run mutate      # 82 mutants, ~50 min (node tools/mutate.js --check only checks the breakages fit)
+npm run mutate      # 84 mutants, ~50 min (node tools/mutate.js --check only checks the breakages fit)
 npm run screens     # README frames
 npm run dist        # dist/RailRunner-<version>-Setup.exe and -Portable.exe
 ```

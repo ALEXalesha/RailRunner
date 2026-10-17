@@ -62,6 +62,8 @@ const MUTANTS = [
   { id: 'gift-repeats', file: 'js/meta.js', from: 'if (src.boardGift !== true) d.boards', to: 'if (true) d.boards', unit: 'подарок', web: 'подарок досок' },
   { id: 'no-gift-for-new', file: 'js/meta.js', from: 'boards: GIFT_BOARDS, boardGift: true,', to: 'boards: 0, boardGift: true,', unit: 'подарок', web: 'подарок: новый' },
   { id: 'no-gift-for-old', file: 'js/meta.js', from: '    if (src.boardGift !== true) d.boards = Math.max(d.boards, GIFT_BOARDS);\n', to: '', unit: 'подарок', web: 'подарок досок' },
+  { id: 'menu-boards-not-shown', file: 'js/app.js', from: "    $('m-boards').textContent = fmt(save.boards);\n", to: '', web: 'меню: число досок' },
+  { id: 'menu-boards-shows-keys', file: 'js/app.js', from: "$('m-boards').textContent = fmt(save.boards);", to: "$('m-boards').textContent = fmt(save.keys);", web: 'меню: число досок' },
   { id: 'buy-twice', file: 'js/meta.js', from: "    if (save.owned[owned].includes(id)) return { ok: false, reason: 'owned' };\n", to: '', unit: 'магазин: персонаж' },
   { id: 'select-unowned', file: 'js/meta.js', from: 'function selectChar(save, id) { if (!save.owned.chars.includes(id)) return false;', to: 'function selectChar(save, id) {', unit: 'магазин: персонаж' },
   { id: 'run-missions-add-up', file: 'js/meta.js', from: "def.scope === 'run' ? Math.max(m.progress[i], v) : m.progress[i] + v", to: 'm.progress[i] + v', unit: 'задания: «за забег»' },

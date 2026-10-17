@@ -90,6 +90,8 @@ h3 { margin: 8px 0 0; font-size: 17px; }
 }
 .stats span, .results span { font-size: 12px; color: var(--muted); }
 .stats b, .results b { font-size: 19px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stats .st-label { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 0; }
+.stats .st-ico { width: 16px; height: 16px; flex: none; }
 .record { background: var(--coin); color: #3b2a00; font-weight: 700; border-radius: 10px; padding: 6px; animation: pop 0.6s ease-out; }
 @keyframes pop { 0% { transform: scale(0.6); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
 .row { display: flex; gap: 10px; }

@@ -700,6 +700,52 @@ test('подарок досок старому сохранению: один р
   expect(await page.evaluate(() => RailRunner.save.boards), 'после перезапуска подарка нет').toBe(2);
 });
 
+// 2.0.3 (Alexey: the start menu did not show how many boards there are): the menu shows the
+// stock of the save next to the coins and keys, with a board icon, and follows the gift, a purchase
+// in the shop and a board spent in a run.
+test('меню: число досок рядом с монетами и ключами = запасу в сохранении (подарок, покупка, трата в забеге)', async ({ page }) => {
+  const menuBoards = () => page.locator('#scr-menu .stats #m-boards');
+  const saved = () => page.evaluate(() => String(RailRunner.save.boards));
+  // a new player: the gift of 3 is in the menu at once
+  await open(page, '?manual=1&seed=7', { fresh: true });
+  await expect(menuBoards()).toBeVisible();
+  await expect(menuBoards()).toHaveText('3');
+  expect(await saved()).toBe('3');
+  await expect(page.locator('#scr-menu .stats .st-boards .st-ico')).toBeVisible();
+  await expect(page.locator('#scr-menu .stats .st-boards [data-i18n="boards"]')).toHaveText('Доски');
+  // the same style as coins and keys: one row of equal boxes
+  const boxes = await page.evaluate(() => [...document.querySelectorAll('#scr-menu .stats > div')].map((d) => { const r = d.getBoundingClientRect(); return [Math.round(r.top), Math.round(r.height), getComputedStyle(d).backgroundColor, getComputedStyle(d.querySelector('b')).fontSize]; }));
+  expect(boxes.length).toBe(4);
+  for (const b of boxes) expect(b).toEqual(boxes[0]);
+  // an old save: the gift tops it up to 3, the menu shows 3, not the old 1
+  await page.evaluate(() => { localStorage.setItem('railrunner:save', JSON.stringify({ v: 2, tutorialDone: true, boards: 1, keys: 5, coins: 600, boardGift: false, runs: 4 })); });
+  await reload(page);
+  await expect(menuBoards()).toHaveText('3');
+  await expect(page.locator('#m-keys')).toHaveText('5');
+  // a purchase in the shop: back in the menu the number is one more
+  await page.click('#m-shop');
+  await page.click('#sh-tabs [data-tab="items"]');
+  await page.locator('.upg[data-item="hoverboard"] .btn').click();
+  expect(await saved()).toBe('4');
+  await page.click('#sh-done');
+  await expect(menuBoards()).toHaveText('4');
+  // a board spent in a run: after the results the menu shows the rest
+  await page.click('#m-play');
+  await clearWorld(page);
+  await page.click('#btn-board');
+  await advance(page, 0.5);
+  await page.evaluate(() => { RailRunner.run.power.board = 0; });
+  await advance(page, 0.5);
+  await obstacleAhead(page, 'fence', 40);
+  expect(await advanceUntil(page, ['continue', 'over'], 30)).toBe('continue');
+  await page.click('#c-no');
+  await page.click('#o-menu');
+  await expect(menuBoards()).toHaveText('3');
+  expect(await saved()).toBe('3');
+  await reload(page);
+  await expect(menuBoards()).toHaveText('3');
+});
+
 test('хитбоксы: барьер, перекладина и ограждение не больше видимой модели (и модель не вылезает за хитбокс по ходу)', async ({ page }) => {
   await open(page);
   const r = await page.evaluate(() => {

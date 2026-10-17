@@ -8,7 +8,7 @@
 // ?preserve=1 - keep the picture for screenshots.
 (function () {
   'use strict';
-  const VERSION = '2.0.2';
+  const VERSION = '2.0.3';
   const R = window.RRCore, M = window.RRMeta, I = window.RRI18n, A = window.RRAudio;
   const DT = R.C.DT;
   const STORE = 'railrunner:save';
@@ -516,6 +516,7 @@
     $('m-best').textContent = fmt(save.best);
     $('m-coins').textContent = fmt(save.coins);
     $('m-keys').textContent = fmt(save.keys);
+    $('m-boards').textContent = fmt(save.boards);
     $('m-ver').textContent = 'RailRunner ' + VERSION;
     $('m-mult').textContent = 'x' + save.missions.level;
     const d = M.dailyFor(TODAY);
