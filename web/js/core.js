@@ -82,7 +82,7 @@
   const LANES = [-1, 0, 1];
   const ACTIONS = ['left', 'right', 'jump', 'slide', 'board', 'pause'];
   const POWERS = ['magnet', 'x2', 'boots', 'board', 'jetpack'];
-  const POWER_BASE = Object.freeze({ magnet: 10, x2: 12, boots: 10, board: 30, jetpack: 7 });
+  const POWER_BASE = Object.freeze({ magnet: 10, x2: 12, boots: 10, board: 20, jetpack: 7 });   // 2.1.0: the hoverboard 20 s (Alexey: 15-20), 40 s fully upgraded
   const POWER_WEIGHT = Object.freeze({ magnet: 24, x2: 20, boots: 18, board: 14, jetpack: 14 });
   const MAX_LEVEL = 5;
   const UPGRADE_COST = Object.freeze([150, 300, 600, 1200, 2400]);
@@ -499,6 +499,8 @@
     return {
       jumps: 0, slides: 0, lanes: 0, powers: 0, roofs: 0, hops: 0, near: 0, tricks: 0, bestCombo: 0,
       jets: 0, boards: 0, hurdles: 0, bars: 0, pits: 0, fences: 0, keys: 0, bumps: 0, districts: 1,
+      saves: 0,                // the board saved the player
+      clean: null,             // metres run before the first crash or board save (null - none yet)
       firstCoinZ: null,
     };
   }
@@ -704,6 +706,7 @@
     }
   }
 
+  const cleanEnd = (run) => { if (run.stats.clean === null) run.stats.clean = Math.max(0, Math.floor(run.z - C.START_Z)); };
   function hit(run, o, lateral, prevX) {
     if (run.invulnT > 0) { if (o.type !== 'pit') smash(run, o); return 'smash'; }
     if (lateral && run.stumbleT <= 0) {
@@ -719,9 +722,12 @@
       if (o.type === 'pit') { o.broken = true; run.y = 0; run.vy = 0; } else smash(run, o);
       clearAround(run);
       run.invulnT = C.INVULN;
+      run.stats.saves++;
+      cleanEnd(run);
       run.events.push('board-break');
       return 'board';
     }
+    cleanEnd(run);
     run.alive = false;
     run.deathBy = o.type === 'train' && o.moving ? (o.freight ? 'freight' : 'moving') : o.type;
     run.killer = o.id;
@@ -997,7 +1003,8 @@
   function result(run) {
     return {
       score: run.score, coins: run.coins, keys: run.keys, distance: Math.floor(run.z - C.START_Z),
-      deathBy: run.deathBy, time: run.t, combo: run.stats.bestCombo, stats: Object.assign({}, run.stats), seed: run.seed,
+      deathBy: run.deathBy, time: run.t, combo: run.stats.bestCombo, seed: run.seed,
+      stats: Object.assign({}, run.stats, { clean: run.stats.clean === null ? Math.floor(run.z - C.START_Z) : run.stats.clean }),
     };
   }
 

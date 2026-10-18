@@ -1156,3 +1156,38 @@ test('ботинки: высокий прыжок над рядом монет �
     assert.equal(side.taken, false, 'монета соседней полосы не притягивается');
   }
 });
+
+// ---------- 2.1.0 ----------
+
+test('доска (2.1.0): 20 с без улучшений, каждый из 5 уровней +20 %, полностью улучшенная - 40 с', () => {
+  assert.equal(R.powerDuration('board', 0), 20);
+  assert.equal(R.powerDuration('board', R.MAX_LEVEL), 40);
+  for (const [lvl, s] of [[0, 20], [5, 40]]) {
+    const run = bare({ boards: 1, upgrades: { board: lvl } });
+    R.act(run, 'board');
+    R.step(run);
+    assert.ok(Math.abs(run.power.board - s) < 0.05, `уровень ${lvl}: ${run.power.board}`);
+  }
+});
+
+test('спасения доской и метры без аварии считаются в забеге', () => {
+  let run = bare();
+  run.power.board = 20;
+  place(run, { type: 'hurdle', lane: 0, z0: 150, z1: 150 + C.HURDLE_D });
+  runTo(run, 320);
+  assert.equal(run.alive, true);
+  assert.equal(run.stats.saves, 1);
+  const res = R.result(run);
+  assert.ok(Math.abs(res.stats.clean - (150 - C.START_Z)) < 3, 'чистые метры до спасения: ' + res.stats.clean);
+  assert.ok(res.distance > res.stats.clean + 150);
+  // авария без доски - чистые метры до неё; забег без происшествий - вся дистанция
+  run = bare();
+  place(run, { type: 'hurdle', lane: 0, z0: 200, z1: 200 + C.HURDLE_D });
+  runTo(run, 400);
+  assert.equal(run.alive, false);
+  assert.equal(R.result(run).stats.clean, R.result(run).distance);
+  run = bare();
+  runTo(run, 250);
+  assert.equal(R.result(run).stats.clean, R.result(run).distance);
+  assert.equal(R.result(run).stats.saves, 0);
+});

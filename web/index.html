@@ -61,7 +61,7 @@
         </button>
         <div class="row">
           <button id="m-shop" class="btn" type="button" data-i18n="shop"></button>
-          <button id="m-ach" class="btn" type="button" data-i18n="achievements"></button>
+          <button id="m-ach" class="btn" type="button"><span data-i18n="achievements"></span><b id="m-boxes" class="box-dot" hidden>0</b></button>
         </div>
         <div class="row">
           <button id="m-records" class="btn" type="button" data-i18n="records"></button>
@@ -107,8 +107,18 @@
     <section id="scr-ach" class="screen" hidden>
       <div class="panel wide">
         <h2 data-i18n="achievements"></h2>
+        <h3 data-i18n="boxesTitle"></h3>
+        <p class="hint" data-i18n="boxesHelp"></p>
+        <div id="ac-boxes" class="box-shelf"></div>
         <p class="hint" id="ac-count"></p>
         <div id="ac-list" class="ach-grid"></div>
+        <div id="box-open" class="box-open" hidden role="dialog" aria-modal="true">
+          <div class="box-stage">
+            <div id="bo-box" class="box-pic"></div>
+            <div id="bo-reward" class="box-reward" hidden><div id="bo-ico" class="bo-ico"></div><small id="bo-rare" class="bo-rare" hidden></small><b id="bo-text"></b></div>
+            <button id="bo-take" class="btn primary" type="button" data-i18n="boxTake"></button>
+          </div>
+        </div>
         <div class="sticky-bottom"><button id="ac-done" class="btn primary" type="button" data-i18n="done"></button></div>
       </div>
     </section>

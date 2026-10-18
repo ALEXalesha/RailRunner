@@ -121,6 +121,25 @@ const MUTANTS = [
   { id: 'particles-ignore-setting', file: 'js/render.js', from: "const d = (settings.particles === 'off' ? 0 : settings.particles === 'low' ? 0.4 : 1) * QUALITY[quality].particles;", to: 'const d = QUALITY[quality].particles;', web: 'графика:' },
   { id: 'shadows-ignore-setting', file: 'js/render.js', from: 'const on = settings.shadows && q.shadow > 0;', to: 'const on = q.shadow > 0;', web: 'графика:' },
   { id: 'key-columns-fixed', file: 'css/style.css', from: '.keys { display: grid; grid-template-columns: minmax(80px, 1fr) repeat(3, minmax(0, 1fr));', to: '.keys { display: grid; grid-template-columns: minmax(80px, 1fr) repeat(3, 110px);', web: 'раскладка' },
+  // 2.1.0: доска 20 с, коробки-сюрпризы за достижения, ярусы, вдвое больше достижений
+  { id: 'board-still-30s', file: 'js/core.js', from: 'board: 20, jetpack: 7 });', to: 'board: 30, jetpack: 7 });', unit: 'доска \\(2.1.0\\)', web: 'доска \\(2.1.0\\)' },
+  { id: 'drops-not-1', file: 'js/meta.js', from: "{ type: 'skin', p: 0.03 }", to: "{ type: 'skin', p: 0.05 }", unit: 'коробки: вероятности' },
+  { id: 'gold-not-better', file: 'js/meta.js', from: "{ type: 'keys', p: 0.28, n: 3 }", to: "{ type: 'keys', p: 0.28, n: 1 }", unit: 'лучше ярус' },
+  { id: 'rare-never-drops', file: 'js/meta.js', from: "if (d.type !== 'skin') return { type: d.type, n: d.n };", to: "if (true) return { type: d.type === 'skin' ? 'coins' : d.type, n: d.n || 100 };", unit: 'выпадает каждый вид' },
+  { id: 'box-random-by-time', file: 'js/meta.js', from: 'R.rng((save.boxSeed ^ Math.imul(save.boxRolls + 1, 0x9e3779b1)) >>> 0)', to: 'R.rng((Math.random() * 4294967296) >>> 0)', unit: 'один seed - те же' },
+  { id: 'box-not-used-up', file: 'js/meta.js', from: '    save.boxes[tier]--;\n', to: '', unit: 'открытие кладёт' },
+  { id: 'box-coins-lost', file: 'js/meta.js', from: "    if (reward.type === 'coins') save.coins = Math.min(1e9, save.coins + reward.n);", to: "    if (reward.type === 'coins') {}", unit: 'открытие кладёт' },
+  { id: 'box-again-each-check', file: 'js/meta.js', from: 'if (!save.achievements[a.id] || save.boxGot[a.id]) continue;', to: 'if (!save.achievements[a.id]) continue;', unit: 'одна за каждое достижение', web: 'сохранение 2.0.5' },
+  { id: 'box-mark-not-saved', file: 'js/meta.js', from: '    if (isObj(src.boxGot)) for (const a of ACHIEVEMENTS) if (src.boxGot[a.id] && d.achievements[a.id]) d.boxGot[a.id] = 1;\n', to: '', unit: 'одна за каждое достижение', web: 'сохранение 2.0.5' },
+  { id: 'old-save-no-boxes', file: 'js/meta.js', from: '    grantBoxes(d);', to: '    void d;', unit: 'одна за каждое достижение', web: 'сохранение 2.0.5' },
+  { id: 'ach-not-doubled', file: 'js/meta.js', from: "    { id: 'daily1', tier: 'bronze', icon: 'calendar', color: '#e0a526', test: (s) => s.stats.dailies >= 1 },\n", to: '', unit: 'достижений 44' },
+  { id: 'new-ach-number-breaks', file: 'js/i18n.js', from: "'Собрать 50\\u00a0000 монет всего'", to: "'Собрать 50 000 монет всего'", unit: 'достижений 44' },
+  { id: 'saves-not-counted', file: 'js/core.js', from: '      run.stats.saves++;\n', to: '', unit: 'спасения доской' },
+  { id: 'clean-ignores-board', file: 'js/core.js', from: "      cleanEnd(run);\n      run.events.push('board-break');", to: "      run.events.push('board-break');", unit: 'спасения доской' },
+  { id: 'tier-not-shown', file: 'js/app.js', from: "el.querySelector('.tier').textContent = I.t('tier_' + a.tier);", to: "el.querySelector('.tier').textContent = '';", web: 'сохранение 2.0.5' },
+  { id: 'box-no-shake', file: 'js/app.js', from: "    wrap.classList.add('shaking');\n", to: '', web: 'коробки: достижение даёт' },
+  { id: 'menu-no-box-count', file: 'js/app.js', from: "$('m-boxes').hidden = !n;", to: "$('m-boxes').hidden = true;", web: 'коробки: достижение даёт' },
+  { id: 'opened-box-not-saved', file: 'js/app.js', from: '    persist();\n    lastBox = w;', to: '    lastBox = w;', web: 'коробки: достижение даёт' },
 ];
 
 function run(m, dir) {

@@ -181,7 +181,8 @@
 
   // ---------- statistics ----------
   const STAT_KEYS = ['distance', 'time', 'jumps', 'slides', 'lanes', 'powers', 'roofs', 'hops', 'near', 'tricks', 'jets',
-    'boards', 'hurdles', 'bars', 'pits', 'fences', 'keys', 'bumps', 'revives', 'missions', 'dailies', 'bestCombo', 'maxDistricts'];
+    'boards', 'hurdles', 'bars', 'pits', 'fences', 'keys', 'bumps', 'revives', 'missions', 'dailies', 'bestCombo', 'maxDistricts',
+    'saves', 'bestClean', 'bestCoins', 'boxes'];
   const DEATHS = ['hurdle', 'bar', 'fence', 'pit', 'train', 'moving', 'freight', 'ramp'];
   function defaultStats() {
     const s = {};
@@ -192,32 +193,68 @@
   }
 
   // ---------- achievements ----------
-  // Each has a badge (icon + colour, drawn by app.js) and pays 100 coins once.
+  // Each has a badge (icon + colour, drawn by app.js), a tier (bronze, silver, gold), pays 100 coins
+  // once and gives a mystery box of its tier once (2.1.0).
+  const TIERS = ['bronze', 'silver', 'gold'];
   const ACHIEVEMENTS = [
-    { id: 'first', icon: 'flag', color: '#3aa35b', test: (s) => s.runs >= 1 },
-    { id: 'km1', icon: 'road', color: '#2e7dd1', test: (s) => s.bestDistance >= 1000 },
-    { id: 'km5', icon: 'road', color: '#8a5bd1', test: (s) => s.bestDistance >= 5000 },
-    { id: 'km10', icon: 'road', color: '#e0a526', test: (s) => s.bestDistance >= 10000 },
-    { id: 'coins100', icon: 'coin', color: '#e0a526', test: (s) => s.bestRuns.some((r) => r.coins >= 100) },
-    { id: 'bank1k', icon: 'bank', color: '#3aa35b', test: (s) => s.totalCoins >= 1000 },
-    { id: 'bank10k', icon: 'bank', color: '#d8443a', test: (s) => s.totalCoins >= 10000 },
-    { id: 'score10k', icon: 'star', color: '#2e7dd1', test: (s) => s.best >= 10000 },
-    { id: 'score50k', icon: 'star', color: '#d8443a', test: (s) => s.best >= 50000 },
-    { id: 'combo10', icon: 'bolt', color: '#ff6a2a', test: (s) => s.stats.bestCombo >= 10 },
-    { id: 'roofs50', icon: 'train', color: '#2e7dd1', test: (s) => s.stats.roofs >= 50 },
-    { id: 'hops10', icon: 'hop', color: '#8a5bd1', test: (s) => s.stats.hops >= 10 },
-    { id: 'near25', icon: 'wind', color: '#16a3b8', test: (s) => s.stats.near >= 25 },
-    { id: 'jets10', icon: 'jet', color: '#ff6a2a', test: (s) => s.stats.jets >= 10 },
-    { id: 'tour', icon: 'map', color: '#3aa35b', test: (s) => s.stats.maxDistricts >= 5 },
-    { id: 'mult5', icon: 'mult', color: '#e0a526', test: (s) => s.missions.level >= 5 },
-    { id: 'mult10', icon: 'mult', color: '#d8443a', test: (s) => s.missions.level >= 10 },
-    { id: 'crew3', icon: 'people', color: '#2e7dd1', test: (s) => s.owned.chars.length >= 3 },
-    { id: 'crewAll', icon: 'people', color: '#d8443a', test: (s) => s.owned.chars.length >= CHARS.length },
-    { id: 'streak3', icon: 'calendar', color: '#8a5bd1', test: (s) => s.daily.streak >= 3 },
-    { id: 'revive', icon: 'heart', color: '#d8443a', test: (s) => s.stats.revives >= 1 },
-    { id: 'upgrade', icon: 'up', color: '#3aa35b', test: (s) => R.POWERS.some((k) => s.upgrades[k] >= R.MAX_LEVEL) },
+    { id: 'first', tier: 'bronze', icon: 'flag', color: '#3aa35b', test: (s) => s.runs >= 1 },
+    { id: 'km1', tier: 'bronze', icon: 'road', color: '#2e7dd1', test: (s) => s.bestDistance >= 1000 },
+    { id: 'km5', tier: 'silver', icon: 'road', color: '#8a5bd1', test: (s) => s.bestDistance >= 5000 },
+    { id: 'km10', tier: 'gold', icon: 'road', color: '#e0a526', test: (s) => s.bestDistance >= 10000 },
+    { id: 'clean1k', tier: 'bronze', icon: 'shield', color: '#16a3b8', test: (s) => s.stats.bestClean >= 1000 },
+    { id: 'clean3k', tier: 'silver', icon: 'shield', color: '#2e7dd1', test: (s) => s.stats.bestClean >= 3000 },
+    { id: 'clean6k', tier: 'gold', icon: 'shield', color: '#d8443a', test: (s) => s.stats.bestClean >= 6000 },
+    { id: 'coins100', tier: 'bronze', icon: 'coin', color: '#e0a526', test: (s) => s.stats.bestCoins >= 100 || s.bestRuns.some((r) => r.coins >= 100) },
+    { id: 'coins300', tier: 'silver', icon: 'coin', color: '#ff6a2a', test: (s) => s.stats.bestCoins >= 300 },
+    { id: 'coins600', tier: 'gold', icon: 'coin', color: '#d8443a', test: (s) => s.stats.bestCoins >= 600 },
+    { id: 'bank1k', tier: 'bronze', icon: 'bank', color: '#3aa35b', test: (s) => s.totalCoins >= 1000 },
+    { id: 'bank10k', tier: 'silver', icon: 'bank', color: '#d8443a', test: (s) => s.totalCoins >= 10000 },
+    { id: 'bank50k', tier: 'gold', icon: 'bank', color: '#e0a526', test: (s) => s.totalCoins >= 50000 },
+    { id: 'score10k', tier: 'silver', icon: 'star', color: '#2e7dd1', test: (s) => s.best >= 10000 },
+    { id: 'score50k', tier: 'gold', icon: 'star', color: '#d8443a', test: (s) => s.best >= 50000 },
+    { id: 'jumps100', tier: 'bronze', icon: 'jump', color: '#3aa35b', test: (s) => s.stats.jumps >= 100 },
+    { id: 'jumps1k', tier: 'silver', icon: 'jump', color: '#2e7dd1', test: (s) => s.stats.jumps >= 1000 },
+    { id: 'jumps5k', tier: 'gold', icon: 'jump', color: '#d8443a', test: (s) => s.stats.jumps >= 5000 },
+    { id: 'slides100', tier: 'bronze', icon: 'slide', color: '#16a3b8', test: (s) => s.stats.slides >= 100 },
+    { id: 'slides1k', tier: 'silver', icon: 'slide', color: '#8a5bd1', test: (s) => s.stats.slides >= 1000 },
+    { id: 'slides5k', tier: 'gold', icon: 'slide', color: '#d8443a', test: (s) => s.stats.slides >= 5000 },
+    { id: 'powers25', tier: 'bronze', icon: 'bolt', color: '#e0a526', test: (s) => s.stats.powers >= 25 },
+    { id: 'powers100', tier: 'silver', icon: 'bolt', color: '#8a5bd1', test: (s) => s.stats.powers >= 100 },
+    { id: 'powers500', tier: 'gold', icon: 'bolt', color: '#d8443a', test: (s) => s.stats.powers >= 500 },
+    { id: 'saves1', tier: 'bronze', icon: 'board', color: '#8a5bd1', test: (s) => s.stats.saves >= 1 },
+    { id: 'saves10', tier: 'silver', icon: 'board', color: '#ff6a2a', test: (s) => s.stats.saves >= 10 },
+    { id: 'saves50', tier: 'gold', icon: 'board', color: '#16a3b8', test: (s) => s.stats.saves >= 50 },
+    { id: 'missions10', tier: 'bronze', icon: 'check', color: '#3aa35b', test: (s) => s.stats.missions >= 10 },
+    { id: 'missions50', tier: 'silver', icon: 'check', color: '#2e7dd1', test: (s) => s.stats.missions >= 50 },
+    { id: 'missions150', tier: 'gold', icon: 'check', color: '#e0a526', test: (s) => s.stats.missions >= 150 },
+    { id: 'combo10', tier: 'silver', icon: 'bolt', color: '#ff6a2a', test: (s) => s.stats.bestCombo >= 10 },
+    { id: 'roofs50', tier: 'silver', icon: 'train', color: '#2e7dd1', test: (s) => s.stats.roofs >= 50 },
+    { id: 'hops10', tier: 'silver', icon: 'hop', color: '#8a5bd1', test: (s) => s.stats.hops >= 10 },
+    { id: 'near25', tier: 'silver', icon: 'wind', color: '#16a3b8', test: (s) => s.stats.near >= 25 },
+    { id: 'jets10', tier: 'silver', icon: 'jet', color: '#ff6a2a', test: (s) => s.stats.jets >= 10 },
+    { id: 'tour', tier: 'gold', icon: 'map', color: '#3aa35b', test: (s) => s.stats.maxDistricts >= 5 },
+    { id: 'mult5', tier: 'silver', icon: 'mult', color: '#e0a526', test: (s) => s.missions.level >= 5 },
+    { id: 'mult10', tier: 'gold', icon: 'mult', color: '#d8443a', test: (s) => s.missions.level >= 10 },
+    { id: 'crew3', tier: 'silver', icon: 'people', color: '#2e7dd1', test: (s) => s.owned.chars.length >= 3 },
+    { id: 'crewAll', tier: 'gold', icon: 'people', color: '#d8443a', test: (s) => s.owned.chars.length >= CHARS.length },
+    { id: 'daily1', tier: 'bronze', icon: 'calendar', color: '#e0a526', test: (s) => s.stats.dailies >= 1 },
+    { id: 'streak3', tier: 'silver', icon: 'calendar', color: '#8a5bd1', test: (s) => s.daily.streak >= 3 },
+    { id: 'revive', tier: 'bronze', icon: 'heart', color: '#d8443a', test: (s) => s.stats.revives >= 1 },
+    { id: 'upgrade', tier: 'gold', icon: 'up', color: '#3aa35b', test: (s) => R.POWERS.some((k) => s.upgrades[k] >= R.MAX_LEVEL) },
   ];
   const ACH_REWARD = 100;
+  // every unlocked achievement whose box was not given yet gives it now: after a run, and once for
+  // the achievements of a 2.0.5 save (the mark boxGot stays, so a reload gives nothing more)
+  function grantBoxes(save) {
+    const got = [];
+    for (const a of ACHIEVEMENTS) {
+      if (!save.achievements[a.id] || save.boxGot[a.id]) continue;
+      save.boxGot[a.id] = 1;
+      save.boxes[a.tier] = Math.min(99999, save.boxes[a.tier] + 1);
+      got.push(a.id);
+    }
+    return got;
+  }
   function checkAchievements(save) {
     const got = [];
     for (const a of ACHIEVEMENTS) {
@@ -225,8 +262,54 @@
       if (a.test(save)) { save.achievements[a.id] = 1; got.push(a.id); }
     }
     save.coins = Math.min(1e9, save.coins + got.length * ACH_REWARD);
+    grantBoxes(save);
     return got;
   }
+  const achTier = (id) => { const a = ACHIEVEMENTS.find((x) => x.id === id); return a ? a.tier : null; };
+
+  // ---------- mystery boxes ----------
+  // What a box can drop: p - the chance (each table sums to 1), n - how many, coins - from min to max.
+  // 'skin' is the rare one: a character or a hoverboard look not owned yet (all owned - SKIN_COINS).
+  // A better tier: more of everything and a bigger chance of the rare one.
+  const DROPS = {
+    bronze: [{ type: 'coins', p: 0.55, min: 100, max: 250 }, { type: 'boards', p: 0.22, n: 1 }, { type: 'keys', p: 0.2, n: 1 }, { type: 'skin', p: 0.03 }],
+    silver: [{ type: 'coins', p: 0.45, min: 250, max: 600 }, { type: 'boards', p: 0.25, n: 2 }, { type: 'keys', p: 0.24, n: 2 }, { type: 'skin', p: 0.06 }],
+    gold: [{ type: 'coins', p: 0.35, min: 600, max: 1500 }, { type: 'boards', p: 0.27, n: 3 }, { type: 'keys', p: 0.28, n: 3 }, { type: 'skin', p: 0.1 }],
+  };
+  const REWARD_TYPES = ['coins', 'boards', 'keys', 'skin'];
+  const SKIN_COINS = 2000;
+  // one roll of a box: r - a random function [0, 1); the save only says which looks are owned
+  function rollBox(tier, r, save) {
+    const table = DROPS[tier];
+    const x = r();
+    let acc = 0, d = table[table.length - 1];
+    for (const t of table) { acc += t.p; if (x < acc) { d = t; break; } }
+    if (d.type === 'coins') return { type: 'coins', n: d.min + Math.floor(r() * (d.max - d.min + 1)) };
+    if (d.type !== 'skin') return { type: d.type, n: d.n };
+    const free = CHARS.filter((c) => !save.owned.chars.includes(c.id)).map((c) => ({ kind: 'char', id: c.id }))
+      .concat(BOARDS.filter((b) => !save.owned.boards.includes(b.id)).map((b) => ({ kind: 'board', id: b.id })));
+    if (!free.length) return { type: 'skin', kind: null, id: null, coins: SKIN_COINS };
+    const f = free[Math.floor(r() * free.length)];
+    return { type: 'skin', kind: f.kind, id: f.id };
+  }
+  // the box's own random numbers come from the save's seed and the number of boxes opened: the same
+  // save opens the same way (the laws set boxSeed), a reload does not roll again
+  const boxRandom = (save) => R.rng((save.boxSeed ^ Math.imul(save.boxRolls + 1, 0x9e3779b1)) >>> 0);
+  function openBox(save, tier) {
+    if (!DROPS[tier] || !(save.boxes[tier] > 0)) return null;
+    const reward = rollBox(tier, boxRandom(save), save);
+    save.boxes[tier]--;
+    save.boxRolls++;
+    save.stats.boxes++;
+    if (reward.type === 'coins') save.coins = Math.min(1e9, save.coins + reward.n);
+    else if (reward.type === 'keys') save.keys = Math.min(99999, save.keys + reward.n);
+    else if (reward.type === 'boards') save.boards = Math.min(99999, save.boards + reward.n);
+    else if (reward.kind === 'char') save.owned.chars = charIds.filter((x) => x === reward.id || save.owned.chars.includes(x));
+    else if (reward.kind === 'board') save.owned.boards = boardIds.filter((x) => x === reward.id || save.owned.boards.includes(x));
+    else save.coins = Math.min(1e9, save.coins + reward.coins);
+    return Object.assign({ tier }, reward);
+  }
+  const newSeed = () => (Math.floor(Math.random() * 4294967296) >>> 0) || 1;
 
   // ---------- the save ----------
   const THEMES = ['auto', 'light', 'dark'];
@@ -248,6 +331,9 @@
       missions: { level: 1, ids: missionSet(1), progress: [0, 0, 0], done: [false, false, false] },
       daily: { date: '', done: false, streak: 0, last: '' },
       achievements: {},
+      boxes: { bronze: 0, silver: 0, gold: 0 },   // mystery boxes not opened yet
+      boxGot: {},                                // achievements whose box was given
+      boxSeed: newSeed(), boxRolls: 0,
       stats: defaultStats(),
       bestRuns: [],
       tutorialDone: false,
@@ -306,6 +392,10 @@
       d.daily.streak = int(s.streak, 0, 0, 999);
     }
     if (isObj(src.achievements)) for (const a of ACHIEVEMENTS) if (src.achievements[a.id]) d.achievements[a.id] = 1;
+    if (isObj(src.boxes)) for (const t of TIERS) d.boxes[t] = int(src.boxes[t], 0, 0, 99999);
+    if (isObj(src.boxGot)) for (const a of ACHIEVEMENTS) if (src.boxGot[a.id] && d.achievements[a.id]) d.boxGot[a.id] = 1;
+    if (typeof src.boxSeed === 'number' && Number.isFinite(src.boxSeed)) d.boxSeed = src.boxSeed >>> 0;
+    d.boxRolls = int(src.boxRolls, 0, 0, 1e9);
     if (isObj(src.stats)) {
       for (const k of STAT_KEYS) d.stats[k] = num(src.stats[k], 0, 0, 1e12);
       if (isObj(src.stats.deaths)) for (const k of DEATHS) d.stats.deaths[k] = int(src.stats.deaths[k], 0, 0, 1e9);
@@ -331,6 +421,7 @@
     st.shake = s.shake !== false;
     st.showFps = s.showFps === true;
     st.bindings = R.sanitizeBindings(s.bindings);
+    grantBoxes(d);         // a 2.0.5 save: a box for each achievement it already has, once
     return d;
   }
 
@@ -401,6 +492,9 @@
     for (const k of ['jumps', 'slides', 'lanes', 'powers', 'roofs', 'hops', 'near', 'tricks', 'jets', 'boards', 'hurdles', 'bars', 'pits', 'fences', 'keys', 'bumps']) st[k] += rs[k] | 0;
     st.bestCombo = Math.max(st.bestCombo, rs.bestCombo | 0);
     st.maxDistricts = Math.max(st.maxDistricts, rs.districts | 0);
+    st.saves += rs.saves | 0;
+    st.bestClean = Math.max(st.bestClean, Math.min(res.distance, typeof rs.clean === 'number' ? rs.clean : res.distance));
+    st.bestCoins = Math.max(st.bestCoins, res.coins);
     if (res.deathBy && DEATHS.includes(res.deathBy)) st.deaths[res.deathBy]++;
     const entry = { score: res.score, distance: res.distance, coins: res.coins, combo: rs.bestCombo | 0, char: res.char || save.char, date: res.date || '', daily: !!res.daily };
     save.bestRuns.push(entry);
@@ -412,6 +506,7 @@
 
   return {
     SAVE_VERSION, GIFT_BOARDS, CHARS, BOARDS, ITEMS, MAX_MULT, MISSIONS, MISSION_IDS, ACHIEVEMENTS, ACH_REWARD, STAT_KEYS, DEATHS,
+    TIERS, DROPS, REWARD_TYPES, SKIN_COINS, rollBox, openBox, grantBoxes, achTier,
     THEMES, LANGS, QUALITIES, PARTICLES, BEST_RUNS, DAILY_GOALS,
     missionSet, missionTarget, missionReward, missionTier, missionView, commitMissions, runValues, skipCost, skipMission,
     dailyFor, dailyValue, completeDaily, dateKey, prevDay, hashStr,

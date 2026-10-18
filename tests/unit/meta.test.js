@@ -346,3 +346,166 @@ test('достижения: открываются по условию один 
   s.owned.chars = M.CHARS.map((c) => c.id);
   assert.deepEqual(M.checkAchievements(s).sort(), ['crew3', 'crewAll']);
 });
+
+// ---------- 2.1.0: ярусы достижений и коробки-сюрпризы ----------
+
+const I18N = require(path.join(WEB, 'js', 'i18n.js')).RRI18n;
+
+test('достижений 44 (вдвое больше 2.0.5), ярусы бронза/серебро/золото, у каждого текст на обоих языках', () => {
+  assert.equal(M.ACHIEVEMENTS.length, 44);
+  assert.deepEqual(M.TIERS, ['bronze', 'silver', 'gold']);
+  for (const a of M.ACHIEVEMENTS) assert.ok(M.TIERS.includes(a.tier), a.id + ': ярус ' + a.tier);
+  for (const t of M.TIERS) assert.ok(M.ACHIEVEMENTS.filter((a) => a.tier === t).length >= 10, 'ярус ' + t);
+  // семьи по ярусам: дистанция, без аварий, монеты, прыжки, подкаты, ускорители, спасения доской, задания
+  for (const fam of [['km1', 'km5', 'km10'], ['clean1k', 'clean3k', 'clean6k'], ['coins100', 'coins300', 'coins600'], ['bank1k', 'bank10k', 'bank50k'],
+    ['jumps100', 'jumps1k', 'jumps5k'], ['slides100', 'slides1k', 'slides5k'], ['powers25', 'powers100', 'powers500'],
+    ['saves1', 'saves10', 'saves50'], ['missions10', 'missions50', 'missions150']]) {
+    assert.deepEqual(fam.map(M.achTier), ['bronze', 'silver', 'gold'], fam.join());
+  }
+  for (const lang of ['ru', 'en']) {
+
+    for (const a of M.ACHIEVEMENTS) for (const k of ['a_' + a.id, 'a_' + a.id + '_d']) {
+      const v = I18N.T[lang][k];
+      assert.ok(v && v !== k, `${lang}: нет текста ${k}`);
+      // 2.0.4: пятизначные числа - с неразрывным пробелом (ru) или запятой (en), не обычным пробелом
+      assert.ok(!/\d \d{3}/.test(v), `${lang} ${k}: число с обычным пробелом «${v}»`);
+    }
+  }
+});
+
+test('достижения: каждое достижимо - игрок, сделавший всё, открывает все 44', () => {
+  const s = M.defaultSave();
+  M.applyResult(s, res({ score: 60000, coins: 700, distance: 11000, stats: { jumps: 5000, slides: 5000, powers: 500, saves: 50, roofs: 50, hops: 10, near: 25, jets: 10, bestCombo: 10, districts: 5, clean: 6500 } }));
+  s.stats.missions = 150; s.stats.revives = 1; s.stats.dailies = 1; s.daily.streak = 3;
+  s.totalCoins = 50000; s.missions.level = 10; s.owned.chars = M.CHARS.map((c) => c.id); s.upgrades.magnet = R.MAX_LEVEL;
+  assert.equal(M.checkAchievements(s).length, 44);
+  // и ни одно не открывается раньше порога: у новичка с одним коротким забегом - только «Первый забег»
+  const n = M.defaultSave();
+  M.applyResult(n, res({ score: 10, coins: 3, distance: 50, stats: { jumps: 2, clean: 50 } }));
+  assert.deepEqual(M.checkAchievements(n), ['first']);
+});
+
+test('забег без аварии: метры до первой аварии или спасения доской идут в лучший «чистый» забег', () => {
+  const s = M.defaultSave();
+  M.applyResult(s, res({ distance: 4000, stats: { clean: 1200, saves: 2 } }));
+  assert.equal(s.stats.bestClean, 1200);
+  assert.equal(s.stats.saves, 2);
+  M.applyResult(s, res({ distance: 3100, stats: { clean: 3100 } }));
+  assert.equal(s.stats.bestClean, 3100);
+  assert.equal(s.stats.saves, 2);
+  assert.ok(M.checkAchievements(s).includes('clean3k'));
+  assert.ok(!s.achievements.clean6k);
+});
+
+test('коробки: вероятности каждой коробки в сумме 1, в каждой есть все виды наград, лучше ярус - лучше коробка', () => {
+  assert.deepEqual(Object.keys(M.DROPS), M.TIERS);
+  const worth = {};
+  for (const t of M.TIERS) {
+    const table = M.DROPS[t];
+    const sum = table.reduce((a, d) => a + d.p, 0);
+    assert.ok(Math.abs(sum - 1) < 1e-9, `${t}: сумма ${sum}`);
+    assert.ok(table.every((d) => d.p > 0), t + ': нулевая вероятность');
+    assert.deepEqual(table.map((d) => d.type).sort(), M.REWARD_TYPES.slice().sort(), t);
+    const p = (k) => table.find((d) => d.type === k);
+    worth[t] = { coins: (p('coins').min + p('coins').max) / 2, keys: p('keys').n, boards: p('boards').n, rare: p('skin').p };
+  }
+  for (const [lo, hi] of [['bronze', 'silver'], ['silver', 'gold']]) {
+    for (const k of ['coins', 'keys', 'boards', 'rare']) assert.ok(worth[hi][k] > worth[lo][k], `${hi} лучше ${lo} по ${k}`);
+  }
+});
+
+test('коробки: выпадает каждый вид награды, частоты по таблице, один seed - те же награды', () => {
+  for (const t of M.TIERS) {
+    const r = R.rng(12345);
+    const s = M.defaultSave();
+    const count = { coins: 0, keys: 0, boards: 0, skin: 0 };
+    const N = 4000;
+    for (let i = 0; i < N; i++) {
+      const w = M.rollBox(t, r, s);
+      count[w.type]++;
+      if (w.type === 'coins') { const d = M.DROPS[t][0]; assert.ok(w.n >= d.min && w.n <= d.max && Number.isInteger(w.n)); }
+      if (w.type === 'skin') assert.ok(w.kind === 'char' ? !s.owned.chars.includes(w.id) : !s.owned.boards.includes(w.id), 'редкое - то, чего ещё нет');
+    }
+    for (const d of M.DROPS[t]) {
+      assert.ok(count[d.type] > 0, `${t}: ${d.type} не выпал ни разу`);
+      assert.ok(Math.abs(count[d.type] / N - d.p) < 0.03, `${t}: ${d.type} ${count[d.type] / N} при ${d.p}`);
+    }
+  }
+  // всё уже куплено - редкое становится монетами
+  const all = M.defaultSave();
+  all.owned.chars = M.CHARS.map((c) => c.id); all.owned.boards = M.BOARDS.map((b) => b.id);
+  const r = R.rng(7);
+  let w;
+  do w = M.rollBox('gold', r, all); while (w.type !== 'skin');
+  assert.equal(w.coins, M.SKIN_COINS);
+  // одно сохранение с тем же boxSeed открывает коробки одинаково
+  const seq = () => { const s = M.defaultSave(); s.boxSeed = 99; s.boxes.gold = 30; const out = []; while (s.boxes.gold) out.push(JSON.stringify(M.openBox(s, 'gold'))); return out; };
+  assert.deepEqual(seq(), seq());
+});
+
+test('коробки: открытие кладёт награду в сохранение (монеты, ключи, доски, персонаж или доска), пустую не открыть', () => {
+  const s = M.defaultSave();
+  s.boxSeed = 1;
+  assert.equal(M.openBox(s, 'bronze'), null, 'коробок нет - нечего открывать');
+  assert.equal(M.openBox(s, 'platinum'), null);
+  s.boxes.gold = 400;
+  const seen = new Set();
+  while (s.boxes.gold > 0) {
+    const before = { coins: s.coins, keys: s.keys, boards: s.boards, chars: s.owned.chars.length, looks: s.owned.boards.length };
+    const w = M.openBox(s, 'gold');
+    seen.add(w.type);
+    assert.equal(w.tier, 'gold');
+    if (w.type === 'coins') assert.equal(s.coins - before.coins, w.n);
+    if (w.type === 'keys') assert.equal(s.keys - before.keys, w.n);
+    if (w.type === 'boards') assert.equal(s.boards - before.boards, w.n);
+    if (w.type === 'skin' && w.kind === 'char') { assert.equal(s.owned.chars.length, before.chars + 1); assert.ok(s.owned.chars.includes(w.id)); }
+    if (w.type === 'skin' && w.kind === 'board') { assert.equal(s.owned.boards.length, before.looks + 1); assert.ok(s.owned.boards.includes(w.id)); }
+    if (w.type === 'skin' && !w.kind) assert.equal(s.coins - before.coins, M.SKIN_COINS);
+  }
+  assert.deepEqual([...seen].sort(), M.REWARD_TYPES.slice().sort());
+  assert.equal(s.stats.boxes, 400);
+  assert.equal(s.boxRolls, 400);
+  // купленное в коробке - как купленное в магазине: порядок каталога, переживает перезагрузку
+  assert.deepEqual(M.sanitizeSave(JSON.stringify(s)).owned, s.owned);
+});
+
+test('коробки: одна за каждое достижение - ровно одна, и после перезагрузки, и при переезде с 2.0.5', () => {
+  // каждое достижение даёт коробку своего яруса
+  for (const a of M.ACHIEVEMENTS) {
+    const s = M.defaultSave();
+    s.achievements[a.id] = 1;
+    M.grantBoxes(s);
+    assert.deepEqual(s.boxes, Object.assign({ bronze: 0, silver: 0, gold: 0 }, { [a.tier]: 1 }), a.id);
+  }
+  // открытие в игре: коробка в запасе, второй проверкой и перезагрузкой не удваивается, открытые не возвращаются
+  const s = M.defaultSave();
+  M.applyResult(s, res({ score: 12000, coins: 120, distance: 1200, stats: { clean: 1200 } }));
+  const got = M.checkAchievements(s);
+  const want = { bronze: 0, silver: 0, gold: 0 };
+  for (const id of got) want[M.achTier(id)]++;
+  assert.deepEqual(s.boxes, want);
+  M.checkAchievements(s);
+  assert.deepEqual(s.boxes, want, 'вторая проверка - коробок столько же');
+  let again = M.sanitizeSave(JSON.stringify(s));
+  assert.deepEqual(again.boxes, want, 'перезагрузка - столько же');
+  M.openBox(again, 'bronze');
+  again = M.sanitizeSave(JSON.stringify(again));
+  M.checkAchievements(again);
+  assert.equal(again.boxes.bronze, want.bronze - 1, 'открытая коробка не возвращается после перезагрузки');
+  // сохранение 2.0.5: достижения есть, коробок и отметок ещё нет - коробка за каждое, один раз
+  const OLD = { v: 2, best: 60000, bestDistance: 5200, coins: 900, runs: 40, tutorialDone: true, boardGift: true,
+    achievements: { first: 1, km1: 1, km5: 1, score50k: 1, tour: 1, upgrade: 1 }, upgrades: { magnet: 5 }, stats: { maxDistricts: 5 } };
+  const m = M.sanitizeSave(JSON.stringify(OLD));
+  assert.deepEqual(m.boxes, { bronze: 2, silver: 1, gold: 3 });
+  assert.equal(m.coins, 900, 'монеты за старые достижения второй раз не платятся');
+  const m2 = M.sanitizeSave(JSON.stringify(m));
+  assert.deepEqual(m2.boxes, m.boxes, 'второе чтение - коробки не удваиваются');
+  // новые достижения 2.1.0, уже заработанные по старой статистике (здесь «Десять тысяч»), дают свою коробку - тоже одну
+  const fresh = M.checkAchievements(m2);
+  assert.deepEqual(fresh, ['score10k']);
+  assert.deepEqual(m2.boxes, { bronze: 2, silver: 2, gold: 3 });
+  M.checkAchievements(m2);
+  assert.deepEqual(M.sanitizeSave(JSON.stringify(m2)).boxes, { bronze: 2, silver: 2, gold: 3 });
+  assert.equal(Object.keys(m2.boxGot).length, Object.keys(m2.achievements).length, 'отметок столько же, сколько достижений');
+  assert.equal(m2.boxSeed, m.boxSeed, 'seed коробок хранится');
+});

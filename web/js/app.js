@@ -8,7 +8,7 @@
 // ?preserve=1 - keep the picture for screenshots.
 (function () {
   'use strict';
-  const VERSION = '2.0.5';
+  const VERSION = '2.1.0';
   const R = window.RRCore, M = window.RRMeta, I = window.RRI18n, A = window.RRAudio;
   const DT = R.C.DT;
   const STORE = 'railrunner:save';
@@ -268,7 +268,7 @@
     for (const id of mis.completed) news.push('✓ ' + missionText(id, save.missions.level - (mis.levelUp ? 1 : 0)) + ' · ' + I.t('missionReward', { n: M.missionReward(save.missions.level - (mis.levelUp ? 1 : 0)) }));
     if (mis.levelUp) news.push('★ ' + I.t('levelUp', { n: save.missions.level }));
     if (daily) news.push('☀ ' + I.t('dailyGot', { coins: daily.coins, keys: daily.keys }));
-    for (const id of ach) news.push('🏅 ' + I.t('achUnlocked', { name: I.t('a_' + id) }));
+    for (const id of ach) news.push('🏅 ' + I.t('achUnlocked', { name: I.t('a_' + id) }) + ' · ' + I.t('achBox', { tier: I.t('tier_' + M.achTier(id)).toLowerCase() }));
     const box = $('o-news');
     box.innerHTML = '';
     for (const n of news) { const d = document.createElement('div'); d.textContent = n; box.appendChild(d); }
@@ -563,6 +563,7 @@
     $('m-daily-state').textContent = done ? I.t('dailyDone') + (save.daily.streak > 1 ? ' · ' + I.t('dailyStreak', { n: save.daily.streak }) : '') : I.t('dailyReward', { coins: d.reward.coins });
     $('m-daily').classList.toggle('done', done);
     renderMiniMissions($('m-missions-list'), null);
+    renderMenuBoxes();
   }
   function renderHowto() {
     const v = keysVars();
@@ -768,6 +769,11 @@
     calendar: '<rect x="8" y="9" width="16" height="15" rx="2" fill="#fff"/><path d="M8 13h16" stroke="#8a5bd1" stroke-width="2"/><path d="M12 7v4M20 7v4" stroke="#fff" stroke-width="2"/>',
     heart: '<path d="M16 25s-9-5.5-9-11.5A4.5 4.5 0 0 1 16 11a4.5 4.5 0 0 1 9 2.5C25 19.5 16 25 16 25z" fill="#fff"/>',
     up: '<path d="M16 6l8 9h-5v10h-6V15H8z" fill="#fff"/>',
+    shield: '<path d="M16 6l8 3v6c0 5-3.5 8.5-8 10.5C11.5 23.5 8 20 8 15V9z" fill="#fff"/><path d="M12.5 15.5l2.5 2.5 4.5-5" stroke="#16a3b8" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+    jump: '<circle cx="16" cy="8.5" r="2.6" fill="#fff"/><path d="M16 11.5v6M16 13l-5-2.5M16 13l5-2.5M16 17.5l-4.5 4M16 17.5l4.5 4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M8 26h16" stroke="#fff" stroke-width="2" stroke-opacity=".6"/>',
+    slide: '<circle cx="9.5" cy="16" r="2.6" fill="#fff"/><path d="M12 18h9l4 3M14 18l-2 4" stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none"/><path d="M6 11h20" stroke="#fff" stroke-width="2.4"/>',
+    board: '<rect x="5" y="14" width="22" height="6" rx="3" fill="#fff"/><path d="M8 17h16" stroke="#ff4fb8" stroke-width="1.6"/><path d="M10 23l-2 3M22 23l2 3M16 23v3" stroke="#fff" stroke-width="1.8" stroke-opacity=".7"/>',
+    check: '<rect x="8" y="7" width="16" height="19" rx="2" fill="#fff"/><path d="M11.5 16.5l3 3 6-6.5" stroke="#3aa35b" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
   };
   function badge(a, locked) {
     return `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="15" fill="${a.color}"/><circle cx="16" cy="16" r="12.5" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.5"/>${BADGE[a.icon] || ''}${locked ? '' : ''}</svg>`;
@@ -780,14 +786,106 @@
       const got = !!save.achievements[a.id];
       if (got) n++;
       const el = document.createElement('div');
-      el.className = 'ach' + (got ? '' : ' locked');
+      el.className = 'ach tier-' + a.tier + (got ? '' : ' locked');
       el.dataset.ach = a.id;
-      el.innerHTML = badge(a, !got) + '<div><div class="name"></div><div class="desc"></div></div>';
+      el.dataset.tier = a.tier;
+      el.innerHTML = badge(a, !got) + '<div><div class="name"></div><div class="desc"></div><div class="tier"></div></div>';
       el.querySelector('.name').textContent = I.t('a_' + a.id);
       el.querySelector('.desc').textContent = I.t('a_' + a.id + '_d');
+      el.querySelector('.tier').textContent = I.t('tier_' + a.tier);
       list.appendChild(el);
     }
     $('ac-count').textContent = I.t('achCount', { n, max: M.ACHIEVEMENTS.length });
+    renderBoxes();
+  }
+
+  // ---------- mystery boxes (2.1.0) ----------
+  const TIER_COLOR = { bronze: ['#a8652a', '#e3a66a'], silver: ['#7f8b99', '#dfe5ec'], gold: ['#c98b00', '#ffe27a'] };
+  function boxSvg(tier) {
+    const [d, l] = TIER_COLOR[tier];
+    return `<svg class="box-svg" viewBox="0 0 48 48" aria-hidden="true"><g class="box-body"><rect x="8" y="21" width="32" height="21" rx="3" fill="${d}"/><rect x="21" y="21" width="6" height="21" fill="${l}"/></g>`
+      + `<g class="box-lid"><path d="M24 14c-3-7-11-7-9-1.5 1 2 5 1.5 9 1.5zM24 14c3-7 11-7 9-1.5-1 2-5 1.5-9 1.5z" fill="${l}" stroke="${d}" stroke-width="1.5"/>`
+      + `<rect x="5" y="13" width="38" height="9" rx="3" fill="${l}"/><rect x="21" y="13" width="6" height="9" fill="${d}"/></g></svg>`;
+  }
+  function renderBoxes() {
+    const shelf = $('ac-boxes');
+    shelf.innerHTML = '';
+    for (const t of M.TIERS) {
+      const n = save.boxes[t];
+      const el = document.createElement('div');
+      el.className = 'box-tile tier-' + t + (n ? '' : ' empty');
+      el.dataset.tier = t;
+      el.innerHTML = boxSvg(t) + '<span class="bt-name"></span><b class="bt-n"></b><button type="button" class="btn small bt-open"></button>';
+      el.querySelector('.bt-name').textContent = I.t('tier_' + t);
+      el.querySelector('.bt-n').textContent = '×' + fmt(n);
+      const btn = el.querySelector('.bt-open');
+      btn.textContent = I.t('boxOpen');
+      btn.disabled = !n;
+      btn.addEventListener('click', () => openBoxUi(t));
+      shelf.appendChild(el);
+    }
+  }
+  function rewardView(w) {
+    const ico = (sel) => { const e = document.querySelector(sel); return e ? e.outerHTML : ''; };
+    if (w.type === 'coins') return { ico: '<span class="coin-dot big"></span>', text: I.t('box_coins', { n: fmt(w.n) }), sound: 'coin' };
+    if (w.type === 'keys') return { ico: ico('#scr-menu .st-keys svg'), text: I.t('box_keys', { n: fmt(w.n) }), sound: 'key' };
+    if (w.type === 'boards') return { ico: ico('#scr-menu .st-boards svg'), text: I.t('box_boards', { n: fmt(w.n) }), sound: 'board-on' };
+    if (w.kind === 'char') return { ico: charSvg(M.CHARS.find((c) => c.id === w.id)), text: I.t('box_char', { name: I.t('c_' + w.id) }), rare: true, sound: 'record' };
+    if (w.kind === 'board') return { ico: `<div class="board-pic" style="${boardCss(M.BOARDS.find((b) => b.id === w.id))}"></div>`, text: I.t('box_board', { name: I.t('b_' + w.id) }), rare: true, sound: 'record' };
+    return { ico: '<span class="coin-dot big"></span>', text: I.t('box_coins', { n: fmt(w.coins) }), rare: true, sound: 'record' };
+  }
+  let boxTimers = [];
+  const reducedMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // the box shakes, the lid flies off, the reward pops out (~0.9 s; at once with reduced motion)
+  function openBoxUi(tier) {
+    const w = M.openBox(save, tier);
+    if (!w) return;
+    persist();
+    lastBox = w;
+    const v = rewardView(w);
+    const wrap = $('box-open');
+    wrap.hidden = false;
+    wrap.className = 'box-open tier-' + tier + (v.rare ? ' rare' : '');
+    wrap.dataset.reward = w.type;
+    $('bo-box').innerHTML = boxSvg(tier);
+    $('bo-ico').innerHTML = v.ico;
+    $('bo-text').textContent = v.text;
+    $('bo-rare').textContent = v.rare ? I.t('box_rare') : '';
+    $('bo-rare').hidden = !v.rare;
+    $('bo-reward').hidden = true;
+    $('bo-take').disabled = true;
+    for (const id of boxTimers) clearTimeout(id);
+    boxTimers = [];
+    const reveal = () => {
+      wrap.classList.add('opened');
+      $('bo-reward').hidden = false;
+      $('bo-take').disabled = false;
+      $('bo-take').focus({ preventScroll: true });
+      A.play(v.sound);
+      renderBoxes();
+      renderMenuBoxes();
+    };
+    if (reducedMotion()) { reveal(); return; }
+    A.play('whoosh');
+    wrap.classList.add('shaking');
+    boxTimers.push(setTimeout(() => { wrap.classList.remove('shaking'); wrap.classList.add('popping'); }, 550));
+    boxTimers.push(setTimeout(reveal, 850));
+  }
+  let lastBox = null;
+  function closeBox() {
+    for (const id of boxTimers) clearTimeout(id);
+    boxTimers = [];
+    $('box-open').hidden = true;
+    $('box-open').className = 'box-open';
+    renderAch();
+    const b = document.querySelector('#ac-boxes .bt-open:not([disabled])');
+    if (b) b.focus({ preventScroll: true });
+  }
+  $('bo-take').addEventListener('click', () => { A.play('click'); closeBox(); });
+  function renderMenuBoxes() {
+    const n = M.TIERS.reduce((a, t) => a + save.boxes[t], 0);
+    $('m-boxes').hidden = !n;
+    $('m-boxes').textContent = fmt(n);
   }
 
   // ---------- records and statistics ----------
@@ -812,7 +910,8 @@
       ['s_totalCoins', fmt(save.totalCoins)], ['s_jumps', fmt(st.jumps)], ['s_slides', fmt(st.slides)], ['s_roofs', fmt(st.roofs)],
       ['s_hops', fmt(st.hops)], ['s_near', fmt(st.near)], ['s_tricks', fmt(st.tricks)], ['s_bestCombo', 'x' + fmt(st.bestCombo)],
       ['s_powers', fmt(st.powers)], ['s_jets', fmt(st.jets)], ['s_boards', fmt(st.boards)], ['s_revives', fmt(st.revives)],
-      ['s_missions', fmt(st.missions)], ['s_dailies', fmt(st.dailies)],
+      ['s_missions', fmt(st.missions)], ['s_dailies', fmt(st.dailies)], ['s_saves', fmt(st.saves)],
+      ['s_bestClean', I.t('meters', { n: fmt(st.bestClean) })], ['s_boxes', fmt(st.boxes)],
       ['s_deaths', deaths.length ? deaths.slice(0, 2).map(([k, n]) => `${I.t('death_' + k)} (${n})`).join(', ') : '—'],
     ];
     const dl = $('rc-stats');
@@ -968,6 +1067,7 @@
       if (act === 'pause' && !e.repeat) { e.preventDefault(); resume(); }
       return;
     }
+    if (e.code === 'Escape' && overlay === 'ach' && !$('box-open').hidden) { e.preventDefault(); if (!$('bo-take').disabled) closeBox(); return; }
     if (e.code === 'Escape' && backTo !== null && ['settings', 'shop', 'missions', 'ach', 'records', 'howto'].includes(overlay)) { e.preventDefault(); back(); }
   }, true);
 
@@ -1040,6 +1140,7 @@
     get manual() { return MANUAL; },
     get tutorial() { return tut; },
     get lastOver() { return lastOver; },
+    get lastBox() { return lastBox; },
     view: { info: () => view.info(), get theme() { return view.theme; }, get quality() { return view.quality; }, get look() { return view.look; }, get scene() { return view.scene; }, get camera() { return view.camera; } },
     // move the simulation by whole steps (works in ?manual=1 and normally);
     // { auto: true } - the autopilot plays the run (tests and README frames)

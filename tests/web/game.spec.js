@@ -605,12 +605,12 @@ async function numberProblems(page, where) {
   }, where);
 }
 
-test('числа не переносятся: меню, магазин, итоги, достижения и рекорды на 320, 360, 390, 768 и 1280 px; плашки не налезают и не выходят за экран', async ({ page }) => {
+test('числа не переносятся: меню, магазин, итоги, достижения с коробками и рекорды на 320, 360, 390, 768 и 1280 px; плашки не налезают и не выходят за экран', async ({ page }) => {
   test.setTimeout(600000);
   const SETS = {
     // the reviewer's numbers of 2.0.3: «1 234 / 567» and «154 3 / 20» in the menu at 360 px
-    usual: { best: 1234567, coins: 154320, keys: 12, boards: 4, run: { score: 1250000, coins: 4321, z: 23456 } },
-    huge: { best: 98765432, coins: 12345678, keys: 1234, boards: 999, totalCoins: 23456789, runs: 123456, run: { score: 98800000, coins: 54321, z: 123456 } },
+    usual: { best: 1234567, coins: 154320, keys: 12, boards: 4, boxes: { bronze: 3, silver: 12, gold: 1 }, run: { score: 1250000, coins: 4321, z: 23456 } },
+    huge: { best: 98765432, coins: 12345678, keys: 1234, boards: 999, boxes: { bronze: 12345, silver: 999, gold: 5678 }, totalCoins: 23456789, runs: 123456, run: { score: 98800000, coins: 54321, z: 123456 } },
   };
   await open(page);
   const problems = [];
@@ -622,7 +622,7 @@ test('числа не переносятся: меню, магазин, итог
       await page.setViewportSize({ width: w, height: h });
       for (const [set, s] of Object.entries(SETS)) {
         await page.evaluate((s) => {
-          Object.assign(RailRunner.save, { best: s.best, coins: s.coins, keys: s.keys, boards: s.boards, totalCoins: s.totalCoins || s.coins, runs: s.runs || 40,
+          Object.assign(RailRunner.save, { best: s.best, coins: s.coins, keys: s.keys, boards: s.boards, boxes: Object.assign({}, s.boxes), totalCoins: s.totalCoins || s.coins, runs: s.runs || 40,
             bestRuns: [{ score: s.best, distance: s.run.z, coins: s.run.coins, char: 'kit', date: '2026-10-17' }] });
           RailRunner.toMenu();
         }, s);
@@ -630,7 +630,6 @@ test('числа не переносятся: меню, магазин, итог
         const check = async (where) => { for (const p of await numberProblems(page, where)) problems.push(`${tag} ${p}`); };
         await check('#scr-menu');
         for (const [btn, scr] of [['#m-ach', '#scr-ach'], ['#m-records', '#scr-records']]) {
-          if (scr === '#scr-ach' && set !== 'usual') continue;          // the texts there do not depend on the save
           await page.click(btn);
           await check(scr);
           await page.locator(scr + ' .sticky-bottom .btn').click();
@@ -1149,4 +1148,103 @@ test('туннель: свод выше бегуна и камеры - на кр
     expect(ceil).toBeGreaterThan(r.headMax + 0.3);
     expect(ceil).toBeGreaterThan(r.wiresTop);       // the wires run under the vault, not through it
   }
+});
+
+// ---------- 2.1.0 ----------
+
+test('коробки: достижение даёт коробку (итоги, значок в меню), открытие с анимацией кладёт награду, после перезагрузки не повторяется', async ({ page }) => {
+  await open(page, '?manual=1&seed=7', { save: { boxSeed: 4242 } });
+  await expect(page.locator('#m-boxes')).toBeHidden();
+  await page.click('#m-play');
+  await advance(page, 3, true);
+  await clearWorld(page);
+  await obstacleAhead(page, 'hurdle');
+  expect(await advanceUntil(page, ['continue', 'over'], 20)).toBe('over');
+  const over = await page.evaluate(() => RailRunner.lastOver);
+  expect(over.ach).toContain('first');
+  await expect(page.locator('#o-news')).toContainText('Первый забег · коробка: бронза');
+  const boxes = await page.evaluate(() => RailRunner.save.boxes);
+  const want = { bronze: 0, silver: 0, gold: 0 };
+  for (const id of over.ach) want[await page.evaluate((id) => RailRunner.meta.achTier(id), id)]++;
+  expect(boxes).toEqual(want);
+  const total = want.bronze + want.silver + want.gold;
+  await page.click('#o-menu');
+  await expect(page.locator('#m-boxes')).toBeVisible();
+  await expect(page.locator('#m-boxes')).toHaveText(String(total));
+  await reload(page);
+  await expect(page.locator('#m-boxes')).toBeVisible();
+  await expect(page.locator('#m-boxes')).toHaveText(String(total));
+  expect(await page.evaluate(() => RailRunner.save.boxes)).toEqual(want);
+  // открыть бронзовую: видна тряска, потом награда; запас -1, награда в банке
+  await page.click('#m-ach');
+  const tile = page.locator('#ac-boxes [data-tier="bronze"]');
+  await expect(tile.locator('.bt-n')).toHaveText('×' + want.bronze);
+  await expect(page.locator('#ac-boxes [data-tier="gold"] .bt-open')).toBeDisabled();
+  const before = await page.evaluate(() => { const s = RailRunner.save; return { coins: s.coins, keys: s.keys, boards: s.boards, chars: s.owned.chars.length, looks: s.owned.boards.length }; });
+  await tile.locator('.bt-open').click();
+  await expect(page.locator('#box-open')).toBeVisible();
+  await expect(page.locator('#box-open')).toHaveClass(/shaking/);
+  await expect(page.locator('#bo-reward')).toBeHidden();
+  await expect(page.locator('#bo-reward')).toBeVisible();
+  const w = await page.evaluate(() => RailRunner.lastBox);
+  expect(w.tier).toBe('bronze');
+  // тот же seed и столько же открытых - та же награда (случай коробки не зависит от времени)
+  expect(w).toEqual(await page.evaluate(() => { const M = RailRunner.meta; const s = M.defaultSave(); s.boxSeed = 4242; s.boxes.bronze = 1; return M.openBox(s, 'bronze'); }));
+  const after = await page.evaluate(() => { const s = RailRunner.save; return { coins: s.coins, keys: s.keys, boards: s.boards, chars: s.owned.chars.length, looks: s.owned.boards.length }; });
+  if (w.type === 'coins') { expect(after.coins - before.coins).toBe(w.n); await expect(page.locator('#bo-text')).toContainText(`+${w.n} монет`); }
+  if (w.type === 'keys') expect(after.keys - before.keys).toBe(w.n);
+  if (w.type === 'boards') expect(after.boards - before.boards).toBe(w.n);
+  if (w.type === 'skin') expect(after.chars + after.looks + after.coins).toBeGreaterThan(before.chars + before.looks + before.coins);
+  await page.click('#bo-take');
+  await expect(page.locator('#box-open')).toBeHidden();
+  await expect(tile.locator('.bt-n')).toHaveText('×' + (want.bronze - 1));
+  await page.click('#ac-done');
+  if (total > 1) await expect(page.locator('#m-boxes')).toBeVisible();
+  if (total > 1) await expect(page.locator('#m-boxes')).toHaveText(String(total - 1));
+  else await expect(page.locator('#m-boxes')).toBeHidden();
+  await reload(page);
+  expect(await page.evaluate(() => RailRunner.save.boxes.bronze)).toBe(want.bronze - 1);
+  expect(await page.evaluate(() => RailRunner.save.stats.boxes)).toBe(1);
+});
+
+test('коробки: сохранение 2.0.5 с достижениями получает по коробке за каждое один раз; ярусы видны на карточках; Esc закрывает коробку', async ({ page }) => {
+  await open(page, '?manual=1&seed=7', { save: { best: 100, bestDistance: 5100, runs: 9, achievements: { first: 1, km1: 1, km5: 1, upgrade: 1 }, upgrades: { board: 5 } } });
+  expect(await page.evaluate(() => RailRunner.save.boxes)).toEqual({ bronze: 2, silver: 1, gold: 1 });
+  await expect(page.locator('#m-boxes')).toBeVisible();
+  await expect(page.locator('#m-boxes')).toHaveText('4');
+  await reload(page);
+  expect(await page.evaluate(() => RailRunner.save.boxes)).toEqual({ bronze: 2, silver: 1, gold: 1 });
+  await page.click('#m-ach');
+  await expect(page.locator('.ach')).toHaveCount(44);
+  await expect(page.locator('.ach.tier-bronze')).not.toHaveCount(0);
+  await expect(page.locator('.ach.tier-silver')).not.toHaveCount(0);
+  await expect(page.locator('.ach.tier-gold')).not.toHaveCount(0);
+  await expect(page.locator('.ach[data-ach="km5"] .tier')).toHaveText('Серебро');
+  await expect(page.locator('.ach[data-ach="upgrade"] .tier')).toHaveText('Золото');
+  await page.locator('#ac-boxes [data-tier="gold"] .bt-open').click();
+  await expect(page.locator('#bo-reward')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#box-open')).toBeHidden();
+  await expect(page.locator('#scr-ach')).toBeVisible();
+  await reload(page);
+  expect(await page.evaluate(() => RailRunner.save.boxes)).toEqual({ bronze: 2, silver: 1, gold: 0 });
+});
+
+test('доска (2.1.0): в магазине 20 с без улучшений и 40 с на пятом уровне, в забеге столько же', async ({ page }) => {
+  await open(page, '?manual=1&seed=7', { save: { boards: 2 } });
+  await page.click('#m-shop');
+  await page.click('#sh-tabs [data-tab="upgrades"]');
+  await expect(page.locator('.upg[data-power="board"] .name')).toHaveText('Ховерборд · 20 с');
+  await page.evaluate(() => { RailRunner.save.upgrades.board = 5; });
+  await page.click('#sh-tabs [data-tab="chars"]');
+  await page.click('#sh-tabs [data-tab="upgrades"]');
+  await expect(page.locator('.upg[data-power="board"] .name')).toHaveText('Ховерборд · 40 с');
+  await page.click('#sh-done');
+  await page.click('#m-play');
+  await clearWorld(page);
+  await page.click('#btn-board');
+  await advance(page, 0.1);
+  const t = await page.evaluate(() => RailRunner.run.power.board);
+  expect(t).toBeGreaterThan(39.5);
+  expect(t).toBeLessThanOrEqual(40);
 });

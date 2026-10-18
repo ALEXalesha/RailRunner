@@ -67,7 +67,7 @@ played again from the settings.
 | Magnet | pulls coins from every track | 10 s |
 | Double score | points for metres, coins and tricks are doubled | 12 s |
 | Super sneakers | jump higher than a train or a fence; coins under the jump are pulled down to you | 10 s |
-| Hoverboard | saves you from one crash: the obstacles in that lane around you pop away | 30 s |
+| Hoverboard | saves you from one crash: the obstacles in that lane around you pop away | 20 s |
 | Jetpack | flight over the trains along a trail of coins that weaves between the tracks; soft landing | 7 s |
 
 Every upgrade in the shop (up to level five) makes a power-up last 20 % longer. The time left of
@@ -85,8 +85,12 @@ each power-up is a bar in the top left corner.
   key, days in a row add a bonus.
 - **Keys** continue a run after a crash: 1, then 2, 4, 8... Missing keys can be bought on the spot
   for coins. Keys sometimes lie on the tracks.
-- **Achievements** (22, with badges) - 100 coins each. **Records**: the ten best runs and overall
-  statistics.
+- **Achievements** (44, with badges, in bronze, silver and gold tiers): distance, a run without a
+  crash, coins, jumps, slides, power-ups, hoverboard saves, missions and more. Each pays 100 coins
+  and gives a **mystery box** of its tier, once. A box is opened on the achievements screen: it
+  shakes, the lid flies off and out comes coins, keys, hoverboards or, now and then, a rare
+  character or board look not owned yet. A better tier gives more and has a bigger chance of the
+  rare one. **Records**: the ten best runs and overall statistics.
 
 ### Shop
 
@@ -134,7 +138,7 @@ Everything is in the repository, nothing is loaded from the network during the g
 ```
 web/index.html      the page with all screens
 web/js/core.js      the rules of a run without the screen: districts, generator, physics, tricks, jetpack, continue, tutorial
-web/js/meta.js      progress between runs: the save (and the 1.0 migration), shop, missions, daily challenge, achievements
+web/js/meta.js      progress between runs: the save (and the 1.0 migration), shop, missions, daily challenge, achievements, mystery boxes
 web/js/gfx.js       graphics helpers: vertex-coloured geometry, textures by code, pools, sky, particles, rain
 web/js/scenery.js   the districts and their light, the tracks and everything around them
 web/js/actors.js    trains, obstacles, coins, power-ups, the runner on joints, the hoverboard
@@ -151,10 +155,10 @@ tools/mutate.js     testing the tests: breaks the rules one by one, the laws mus
 
 ```
 npm ci
-npm test            # 72 laws of the rules and the progress, ~70 s
-npm run test:web    # 40 page scenarios, ~23 min
+npm test            # 81 laws of the rules and the progress, ~70 s
+npm run test:web    # 43 page scenarios, ~23 min
 npm run test:app    # 3 app laws, ~1 min
-npm run mutate      # 98 mutants, ~65 min (node tools/mutate.js --check only checks the breakages fit)
+npm run mutate      # 116 mutants, ~70 min (node tools/mutate.js --check only checks the breakages fit)
 npm run screens     # README frames
 npm run dist        # dist/RailRunner-<version>-Setup.exe and -Portable.exe
 ```
