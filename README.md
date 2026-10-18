@@ -152,9 +152,9 @@ tools/mutate.js     testing the tests: breaks the rules one by one, the laws mus
 ```
 npm ci
 npm test            # 65 laws of the rules and the progress, ~40 s
-npm run test:web    # 39 page scenarios, ~20 min
+npm run test:web    # 40 page scenarios, ~23 min
 npm run test:app    # 3 app laws, ~1 min
-npm run mutate      # 84 mutants, ~50 min (node tools/mutate.js --check only checks the breakages fit)
+npm run mutate      # 89 mutants, ~65 min (node tools/mutate.js --check only checks the breakages fit)
 npm run screens     # README frames
 npm run dist        # dist/RailRunner-<version>-Setup.exe and -Portable.exe
 ```

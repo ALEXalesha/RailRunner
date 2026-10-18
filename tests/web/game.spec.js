@@ -560,6 +560,100 @@ test('итоги и продолжение тоже помещаются на м
   }
 });
 
+// Numbers on one line, the boxes with numbers (.stats, .results) inside the screen, not on each other, the name and the
+// number inside their box and side by side, not one over the other, the number not smaller than 14 px. Every number of
+// the screen is checked: a Range over it gives more than one line top - it is broken.
+async function numberProblems(page, where) {
+  return page.evaluate((where) => {
+    const out = [];
+    const W = document.documentElement.clientWidth;
+    const scope = document.querySelector(where);
+    const NUM = /\d+(?:[\u00a0\u202f ,.]\d{3})+|\d+/g;
+    const tw = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      const el = n.parentElement;
+      if (!el || !el.getClientRects().length) continue;
+      NUM.lastIndex = 0;
+      for (let m = NUM.exec(n.data); m; m = NUM.exec(n.data)) {
+        const r = document.createRange();
+        r.setStart(n, m.index); r.setEnd(n, m.index + m[0].length);
+        const lines = new Set([...r.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top)));
+        if (lines.size > 1) out.push(`${where}: число «${m[0]}» (${el.id || el.className}) на ${lines.size} строках`);
+      }
+    }
+    const rect = (e) => e.getBoundingClientRect();
+    const cross = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+    const name = (d) => d.textContent.trim().replace(/\s+/g, ' ').slice(0, 24);
+    const boxes = [...scope.querySelectorAll('.stats > div, .results > div')].filter((d) => d.getClientRects().length);
+    for (const d of boxes) {
+      const r = rect(d), cs = getComputedStyle(d);
+      if (r.left < -0.5 || r.right > W + 0.5) out.push(`${where}: плашка «${name(d)}» за краем экрана`);
+      const l = r.left + parseFloat(cs.paddingLeft), rr = r.right - parseFloat(cs.paddingRight);
+      // the text itself, not the element: a block <b> stays in its box while a long number runs out of it
+      const kids = [...d.children].map((k) => { const q = document.createRange(); q.selectNodeContents(k); return q.getBoundingClientRect(); });
+      for (const k of kids) if (k.left < l - 0.5 || k.right > rr + 0.5) out.push(`${where}: в плашке «${name(d)}» текст вылезает (${Math.round(k.left)}..${Math.round(k.right)} при ${Math.round(l)}..${Math.round(rr)})`);
+      const els = [...d.children].map(rect);       // the text's own box is taller than its line: name over number is not a cross
+      if (els.length === 2 && cross(els[0], els[1])) out.push(`${where}: в плашке «${name(d)}» подпись налезает на число`);
+      const b = d.querySelector('b');
+      if (b && parseFloat(getComputedStyle(b).fontSize) < 14) out.push(`${where}: в плашке «${name(d)}» число мельче 14 px - на телефоне не прочесть`);
+    }
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      if (cross(rect(boxes[i]), rect(boxes[j]))) out.push(`${where}: плашки «${name(boxes[i])}» и «${name(boxes[j])}» налезают друг на друга`);
+    }
+    if (document.documentElement.scrollWidth > W + 1) out.push(`${where}: горизонтальная прокрутка страницы`);
+    return out;
+  }, where);
+}
+
+test('числа не переносятся: меню, магазин, итоги, достижения и рекорды на 320, 360, 390, 768 и 1280 px; плашки не налезают и не выходят за экран', async ({ page }) => {
+  test.setTimeout(600000);
+  const SETS = {
+    // the reviewer's numbers of 2.0.3: «1 234 / 567» and «154 3 / 20» in the menu at 360 px
+    usual: { best: 1234567, coins: 154320, keys: 12, boards: 4, run: { score: 1250000, coins: 4321, z: 23456 } },
+    huge: { best: 98765432, coins: 12345678, keys: 1234, boards: 999, totalCoins: 23456789, runs: 123456, run: { score: 98800000, coins: 54321, z: 123456 } },
+  };
+  await open(page);
+  const problems = [];
+  for (const lang of ['ru', 'en']) {
+    await page.evaluate((lang) => { const s = JSON.parse(localStorage.getItem('railrunner:save')); s.settings = Object.assign(s.settings || {}, { lang }); localStorage.setItem('railrunner:save', JSON.stringify(s)); }, lang);
+    await reload(page);
+    expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
+    for (const [w, h] of [[320, 640], [360, 740], [390, 844], [768, 1024], [1280, 760]]) {
+      await page.setViewportSize({ width: w, height: h });
+      for (const [set, s] of Object.entries(SETS)) {
+        await page.evaluate((s) => {
+          Object.assign(RailRunner.save, { best: s.best, coins: s.coins, keys: s.keys, boards: s.boards, totalCoins: s.totalCoins || s.coins, runs: s.runs || 40,
+            bestRuns: [{ score: s.best, distance: s.run.z, coins: s.run.coins, char: 'kit', date: '2026-10-17' }] });
+          RailRunner.toMenu();
+        }, s);
+        const tag = `${w}x${h} ${lang} ${set}`;
+        const check = async (where) => { for (const p of await numberProblems(page, where)) problems.push(`${tag} ${p}`); };
+        await check('#scr-menu');
+        for (const [btn, scr] of [['#m-ach', '#scr-ach'], ['#m-records', '#scr-records']]) {
+          if (scr === '#scr-ach' && set !== 'usual') continue;          // the texts there do not depend on the save
+          await page.click(btn);
+          await check(scr);
+          await page.locator(scr + ' .sticky-bottom .btn').click();
+        }
+        await page.click('#m-shop');
+        await check('#scr-shop');
+        await page.click('#sh-done');
+        await page.click('#m-play');
+        await clearWorld(page);
+        await page.evaluate((r) => { Object.assign(RailRunner.run, { score: r.score, coins: r.coins, z: r.z }); }, s.run);
+        await advance(page, 0.1);
+        await obstacleAhead(page, 'fence', 40);
+        expect(await advanceUntil(page, ['continue', 'over'], 30)).toBe('continue');
+        await page.click('#c-no');
+        await expect(page.locator('#scr-over')).toBeVisible();
+        await check('#scr-over');
+        await page.click('#o-menu');
+      }
+    }
+  }
+  expect(problems).toEqual([]);
+});
+
 test('звук: синтез после щелчка, монеты звенят, ранец ревёт, громкость 0 глушит, музыка только в забеге и быстрее со скоростью', async ({ page }) => {
   await open(page);
   expect(await page.evaluate(() => RailRunner.audio.ctx)).toBeNull();

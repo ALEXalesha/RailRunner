@@ -89,9 +89,16 @@ h3 { margin: 8px 0 0; font-size: 17px; }
   flex: 1; background: var(--btn); border-radius: 12px; padding: 7px 6px; display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: center;
 }
 .stats span, .results span { font-size: 12px; color: var(--muted); }
-.stats b, .results b { font-size: 19px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.stats .st-label { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 0; }
-.stats .st-ico { width: 16px; height: 16px; flex: none; }
+/* numbers never break: one line each; too long for four in a row - two rows of two, then a smaller font (fitStats in app.js) */
+.stats b, .results b { font-size: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.2; }
+.stats span, .results span { white-space: nowrap; }
+.stats.grid2, .results.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; }
+.stats.grid2 > div, .results.grid2 > div { padding: 4px 6px; gap: 0; }
+.stats.grid2-h > div, .results.grid2-h > div { flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 9px; }
+.grid2-h > div > span { flex: none; text-align: left; }
+.stats .st-label { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.stats .st-ico { width: 15px; height: 15px; flex: none; }
+.stats .coin-dot.st-ico { width: 13px; height: 13px; margin: 1px; box-shadow: 0 1px 2px rgba(0,0,0,0.35); }
 .record { background: var(--coin); color: #3b2a00; font-weight: 700; border-radius: 10px; padding: 6px; animation: pop 0.6s ease-out; }
 @keyframes pop { 0% { transform: scale(0.6); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
 .row { display: flex; gap: 10px; }

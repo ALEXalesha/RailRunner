@@ -82,6 +82,12 @@ const MUTANTS = [
   { id: 'catenary-gantry-low', file: 'js/scenery.js', from: "G.box(0.04, 0.8, 0.04, 0x444444, [lx, C0 + 0.35, 0])", to: "G.box(0.04, 0.8, 0.04, 0x444444, [lx, 6.2, 0])", web: 'провода:' },
   { id: 'tunnel-vault-low', file: 'js/scenery.js', from: 'const TUNNEL_LOW = CATENARY_WIRE_Y + 0.7;', to: 'const TUNNEL_LOW = 7.3;', web: 'туннель:' },
   { id: 'tunnel-portal-low', file: 'js/scenery.js', from: 'G.box(12.4, 1.2, 0.8, 0x9a948a, [0, TV + 0.6, -0.2])', to: 'G.box(12.4, 1.2, 0.8, 0x9a948a, [0, 9.0, -0.2])', web: 'туннель:' },
+  // числа в плашках меню, магазина и итогов (2.0.4): одной строкой, внутри своей плашки
+  { id: 'stats-number-wraps', file: 'css/style.css', from: 'white-space: nowrap; line-height: 1.2; }', to: 'overflow-wrap: anywhere; line-height: 1.2; }', web: 'числа не переносятся' },
+  { id: 'stats-not-fitted', file: 'js/app.js', from: '      if (!box.offsetParent) continue;\n', to: '      continue;\n', web: 'числа не переносятся' },
+  { id: 'stats-overlap-unseen', file: 'js/app.js', from: '        if (kids.some((k) => k.left < left - 0.5 || k.right > right + 0.5)) return true;\n', to: '', web: 'числа не переносятся' },
+  { id: 'stats-no-two-rows', file: 'js/app.js', from: "const FIT_LAYOUTS = [[[], 15], [['grid2', 'grid2-h'], 15], [['grid2'], 11]];", to: 'const FIT_LAYOUTS = [[[], 11]];', web: 'числа не переносятся' },
+  { id: 'ach-number-breaks', file: 'js/i18n.js', from: "'Пробежать 10\\u00a0000 м за забег'", to: "'Пробежать 10 000 м за забег'", web: 'числа не переносятся' },
   { id: 'run-key-not-banked', file: 'js/app.js', from: '        save.keys = Math.min(99999, save.keys + 1);\n        run.keys--;\n', to: '', web: 'ключ, найденный' },
   { id: 'ach-text-overflows', file: 'css/style.css', from: '.ach > div { min-width: 0; }', to: '.ach > div { min-width: 0; white-space: nowrap; }', web: 'раскладка: все экраны' },
   { id: 'run-key-twice', file: 'js/app.js', from: '        run.keys--;\n', to: '', web: 'ключ, найденный' },

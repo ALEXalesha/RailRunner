@@ -146,9 +146,9 @@ tools/mutate.js     проверка проверок: ломает правил
 ```
 npm ci
 npm test            # 65 законов правил и прогресса, ~40 с
-npm run test:web    # 39 сценариев страницы, ~20 мин
+npm run test:web    # 40 сценариев страницы, ~23 мин
 npm run test:app    # 3 закона программы, ~1 мин
-npm run mutate      # 84 мутанта, ~50 мин (node tools/mutate.js --check - только проверить, что поломки на месте)
+npm run mutate      # 89 мутантов, ~65 мин (node tools/mutate.js --check - только проверить, что поломки на месте)
 npm run screens     # кадры для README
 npm run dist        # dist/RailRunner-<версия>-Setup.exe и -Portable.exe
 ```

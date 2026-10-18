@@ -8,7 +8,7 @@
 // ?preserve=1 - keep the picture for screenshots.
 (function () {
   'use strict';
-  const VERSION = '2.0.3';
+  const VERSION = '2.0.4';
   const R = window.RRCore, M = window.RRMeta, I = window.RRI18n, A = window.RRAudio;
   const DT = R.C.DT;
   const STORE = 'railrunner:save';
@@ -100,7 +100,42 @@
     if (name === 'howto') renderHowto();
     if (name === 'pause') renderMiniMissions($('p-missions'), runRes(false));
     view.setShowcase(name === 'shop', { board: shopTab === 'boards' });
+    fitStats();
     if (name !== 'shop' && preview) { preview = null; view.setCharacter(charCfg(save.char)); view.setBoard(boardCfg(save.board)); }
+  }
+  // The boxes with numbers (menu, shop, results): a number is never broken into two lines (white-space: nowrap).
+  // Too long for its box - the next layout, the first one where everything fits: one row with a smaller font (the same
+  // in every box, not below 15 px); two rows of two, a name and its number side by side; two rows of two, the name
+  // above the number (down to 11 px). Called after the numbers change, on resize and on a language switch.
+  const FIT_LAYOUTS = [[[], 15], [['grid2', 'grid2-h'], 15], [['grid2'], 11]];
+  function fitStats() {
+    for (const box of document.querySelectorAll('.stats, .results')) {
+      if (!box.offsetParent) continue;
+      const items = [...box.children];
+      const nums = items.map((d) => d.querySelector('b')).filter(Boolean);
+      // a box overflows if the text of its name or number runs out of its padding or they are not side by side
+      // (the text, not the element: a block <b> stays inside its box while a long number runs out of it)
+      const textRect = (k) => { const q = document.createRange(); q.selectNodeContents(k); return q.getBoundingClientRect(); };
+      const over = () => items.some((d) => {
+        if (d.scrollWidth > d.clientWidth + 0.5) return true;
+        const r = d.getBoundingClientRect(), cs = getComputedStyle(d), kids = [...d.children].map(textRect);
+        const left = r.left + parseFloat(cs.paddingLeft), right = r.right - parseFloat(cs.paddingRight);
+        if (kids.some((k) => k.left < left - 0.5 || k.right > right + 0.5)) return true;
+        // side by side: the boxes of the name and the number (the text's own box is taller than its line)
+        const boxes = [...d.children].map((k) => k.getBoundingClientRect());
+        return boxes.length === 2 && boxes[0].top < boxes[1].bottom - 1 && boxes[1].top < boxes[0].bottom - 1 && boxes[0].right > boxes[1].left + 0.5;
+      });
+      const setSize = (px) => { for (const b of nums) b.style.fontSize = px ? px + 'px' : ''; };
+      const layouts = items.length === 4 ? FIT_LAYOUTS : [[[], 11]];
+      for (const [cls, min] of layouts) {
+        box.classList.remove('grid2', 'grid2-h');
+        box.classList.add(...cls);
+        setSize(0);
+        let size = nums.length ? parseFloat(getComputedStyle(nums[0]).fontSize) : min;
+        while (over() && size > min) setSize(--size);
+        if (!over()) break;
+      }
+    }
   }
   function openSub(name) {
     backTo = overlay;
@@ -214,9 +249,9 @@
     const ach = M.checkAchievements(save);
     persist();
     lastOver = { res, rec, mis, daily, ach };
-    $('o-score').textContent = res.score;
-    $('o-coins').textContent = res.coins;
-    $('o-dist').textContent = I.t('meters', { n: res.distance });
+    $('o-score').textContent = fmt(res.score);
+    $('o-coins').textContent = fmt(res.coins);
+    $('o-dist').textContent = I.t('meters', { n: fmt(res.distance) });
     $('o-combo').textContent = 'x' + (res.stats.bestCombo || 0);
     $('o-record').hidden = !rec.record;
     renderOverNews();
@@ -492,7 +527,10 @@
     updateHints();
     if (overlay && overlay !== 'over' && overlay !== 'continue') show(overlay);
     if (overlay === 'over' && lastOver) {
-      $('o-dist').textContent = I.t('meters', { n: lastOver.res.distance });
+      $('o-score').textContent = fmt(lastOver.res.score);
+      $('o-coins').textContent = fmt(lastOver.res.coins);
+      $('o-dist').textContent = I.t('meters', { n: fmt(lastOver.res.distance) });
+      fitStats();
       renderOverNews();
       renderMiniMissions($('o-missions'), null);
     }
@@ -619,6 +657,7 @@
     $('sh-coins').textContent = fmt(save.coins);
     $('sh-keys').textContent = fmt(save.keys);
     $('sh-boards').textContent = fmt(save.boards);
+    fitStats();
     for (const b of $('sh-tabs').querySelectorAll('button')) { b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(b.dataset.tab === shopTab)); }
     const list = $('sh-list');
     list.innerHTML = '';
@@ -972,6 +1011,7 @@
   function resize() {
     const r = canvas.getBoundingClientRect();
     view.resize(Math.round(r.width), Math.round(r.height));
+    fitStats();
   }
   window.addEventListener('resize', resize);
 
