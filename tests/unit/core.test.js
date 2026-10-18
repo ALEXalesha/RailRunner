@@ -491,7 +491,7 @@ test('встречный поезд трогается по сигналу и в
   runTo(run, 300);
   assert.equal(run.alive, false);
   assert.ok(Math.abs(run.z - tr.enc0) < 0.5, `авария на ${run.z.toFixed(2)}, ждали ${tr.enc0.toFixed(2)}`);
-  assert.ok(run.events.includes('horn'), 'сигнал при старте');
+  assert.equal(run.events.includes('horn'), R.hornFor(tr), 'гудит при старте только поезд, выбранный гудеть (R.hornFor)');
 });
 
 test('ботинки: прыжок выше крыши поезда, обычный - ниже', () => {
@@ -994,4 +994,165 @@ test('свайпы и касания', () => {
   assert.equal(R.classifySwipe(2, 3, 100, 400, W, H), 'jump', 'касание посередине');
   assert.equal(R.classifySwipe(2, 3, 900, 400, W, H), null, 'долгое нажатие - ничего');
   assert.equal(R.classifySwipe(20, 0, 100, 400, W, H), 'jump', 'дрожание пальца - касание, а не свайп');
+});
+
+// ---------- 2.0.5: доска убирает препятствия вокруг, гудки, монеты ранца, ботинки ----------
+
+// бегун внутри целого (не разбитого) препятствия - то, что видит игрок: модель вокруг бегуна
+function insideModels(run) {
+  const h = R.playerH(run);
+  const out = [];
+  for (const o of run.world.obstacles) {
+    if (o.broken || o.type === 'pit') continue;
+    const [a, b] = R.extentAt(o, run.z);
+    if (run.z + C.PLAYER_HALF_D <= a || run.z - C.PLAYER_HALF_D >= b) continue;
+    if (Math.abs(run.x - R.laneX(o.lane)) >= C.PLAYER_HALF_W + R.halfW(o)) continue;
+    const [bot, top] = R.solidAt(o, Math.min(b, Math.max(a, run.z)));
+    if (run.y >= top - 0.05 || run.y + h <= bot) continue;
+    out.push(`${o.type}${o.moving ? ' (едет)' : ''} на ${a.toFixed(1)}..${b.toFixed(1)}`);
+  }
+  return out;
+}
+
+test('доска спасает: препятствия в полосе вокруг пропадают, и потом бегун ни в одной модели (200 миров, 2 с после спасения)', () => {
+  const N = 240;                                  // 2 с по 1/120
+  const bad = [];
+  let saves = 0;
+  for (let seed = 1; seed <= 200; seed++) {
+    const run = R.newRun(seed);
+    run.lane = [-1, 0, 1][seed % 3];
+    run.x = R.laneX(run.lane);
+    run.power.board = 30;
+    let after = -1;
+    for (let i = 0; i < 120 * 90 && run.alive && (after < 0 || after < N); i++) {
+      R.step(run);
+      if (after < 0 && run.events.includes('board-break')) { after = 0; saves++; }
+      run.events.length = 0;
+      if (after >= 0) {
+        after++;
+        if (run.alive && run.invulnT > 0) { const ins = insideModels(run); if (ins.length) bad.push(`мир ${seed}, кадр +${after}: ${ins.join(', ')}`); }
+      }
+    }
+  }
+  assert.ok(saves >= 190, `спасений доской ${saves}`);
+  assert.deepEqual(bad.slice(0, 8), []);
+});
+
+test('доска спасает от поезда: поезд и барьер сразу за ним пропадают с хлопком, соседняя полоса и дальний барьер - нет', () => {
+  const run = bare();
+  run.power.board = 30;
+  const tr = place(run, { type: 'train', lane: 0, z0: 40, z1: 40 + R.trainLen(1), cars: 1 });
+  const hz = 40 + R.trainLen(1) + 1.5;
+  const hu = place(run, { type: 'hurdle', lane: 0, z0: hz, z1: hz + C.HURDLE_D });
+  const far = place(run, { type: 'hurdle', lane: 0, z0: 200, z1: 200 + C.HURDLE_D });
+  const side = place(run, { type: 'train', lane: 1, z0: 38, z1: 38 + R.trainLen(2), cars: 2 });
+  runTo(run, 41);
+  assert.equal(run.alive, true);
+  assert.ok(tr.broken && hu.broken, 'поезд и барьер сразу за ним убраны');
+  assert.ok(!side.broken && !far.broken, 'соседняя полоса и дальний барьер на месте');
+  assert.ok(run.events.includes('smash') && run.events.includes('board-break'));
+  assert.deepEqual(run.smashes.map((m) => m.id).sort(), [tr.id, hu.id].sort(), 'хлопок там, где они стояли');
+  runTo(run, 60);
+  assert.deepEqual(insideModels(run), []);
+});
+
+test('неуязвимость (после доски, продолжения, ранца): препятствие на пути пропадает, а не проходит сквозь бегуна', () => {
+  const run = bare();
+  run.invulnT = 3;
+  const h = place(run, { type: 'fence', lane: 0, z0: 20, z1: 20 + C.FENCE_D });
+  const t = place(run, { type: 'train', lane: 0, z0: 30, z1: 30 + R.trainLen(2), cars: 2 });
+  runTo(run, 32, (r) => { assert.deepEqual(insideModels(r), []); });
+  assert.equal(run.alive, true);
+  assert.ok(h.broken && t.broken);
+});
+
+test('гудки: встречный поезд гудит не всегда - около четверти поездов и не чаще раза в HORN_GAP секунд', () => {
+  let trains = 0, horns = 0, minGap = Infinity, chosen = 0;
+  for (let seed = 1; seed <= 12; seed++) {
+    const run = R.newRun(seed);
+    let last = -Infinity;
+    const seen = new Set();
+    runTo(run, 6000, (r) => {
+      R.autopilot(r);
+      for (const o of r.world.obstacles) if (o.moving && o.k > 0 && o.triggered && !seen.has(o.id)) { seen.add(o.id); trains++; if (R.hornFor(o)) chosen++; }
+      if (r.events.includes('horn')) { horns++; minGap = Math.min(minGap, r.t - last); last = r.t; }
+      r.events.length = 0;
+    });
+  }
+  assert.ok(trains > 100, `встречных поездов ${trains}`);
+  const share = chosen / trains;
+  assert.ok(share > 0.15 && share < 0.35, `выбрано гудеть ${(share * 100).toFixed(0)} %`);
+  assert.ok(horns > 0 && horns <= chosen, `гудков ${horns} из ${chosen} выбранных`);
+  assert.ok(minGap >= C.HORN_GAP - 1e-9, `между гудками ${minGap.toFixed(2)} с`);
+  assert.ok(C.HORN_CHANCE <= 0.3 && C.HORN_GAP >= 5);
+});
+
+// монеты ранца: взять ранец там, где стоит игрок, и вернуть монеты этого полёта по порядку
+function jetFlight(seed, travel) {
+  const run = R.newRun(seed);
+  runTo(run, travel, (r) => { r.invulnT = 5; r.events.length = 0; });
+  run.invulnT = 0;
+  for (const k of R.POWERS) run.power[k] = 0;        // по пути мог подобрать свой ранец
+  for (const o of run.world.obstacles) {              // и стоять в препятствии, через которое шёл неуязвимым
+    const [p, q] = R.extentAt(o, run.z);
+    if (q > run.z - 2 && p < run.z + 6) o.broken = true;
+  }
+  const before = new Set(run.world.coins.map((c) => c.id));
+  run.world.powers.push({ id: 9e6, kind: 'jetpack', lane: run.lane, z: run.z + 1, y: run.y + 1, taken: false });
+  run.world.powers.sort((a, b) => a.z - b.z);
+  runTo(run, run.z + 3);
+  const coins = run.world.coins.filter((c) => !before.has(c.id) && c.y > C.JET_Y).sort((a, b) => a.z - b.z);
+  return { run, coins };
+}
+
+test('ранец: монеты в воздухе петляют по полосам (не меньше двух), через полосу не прыгают, прямые куски длиннее поворота', () => {
+  const bad = [];
+  for (let seed = 1; seed <= 40; seed++) {
+    const { coins } = jetFlight(seed, 100 + (seed % 9) * 250);
+    const lanes = new Set(coins.filter((c) => Number.isInteger(c.lane)).map((c) => c.lane));
+    if (coins.length < 20) bad.push(`мир ${seed}: монет ${coins.length}`);
+    if (lanes.size < 2) bad.push(`мир ${seed}: одна полоса ${[...lanes]}`);
+    let segStart = coins[0].z, segLane = coins[0].lane;
+    for (let i = 1; i < coins.length; i++) {
+      const d = Math.abs(coins[i].lane - coins[i - 1].lane);
+      if (d > 0.5 + 1e-9) bad.push(`мир ${seed}: разрыв ${coins[i - 1].lane} -> ${coins[i].lane} на ${coins[i].z.toFixed(0)}`);
+      if (coins[i].z - coins[i - 1].z > 2.3) bad.push(`мир ${seed}: дыра ${(coins[i].z - coins[i - 1].z).toFixed(1)} м`);
+      if (Number.isInteger(coins[i].lane) && coins[i].lane !== segLane) {
+        const need = R.switchDist(R.speedAt(coins[i].z));
+        if (coins[i].z - segStart < need && i > 2) bad.push(`мир ${seed}: кусок ${(coins[i].z - segStart).toFixed(1)} м короче ${need.toFixed(1)}`);
+        segStart = coins[i].z; segLane = coins[i].lane;
+      }
+    }
+  }
+  assert.deepEqual(bad.slice(0, 8), []);
+});
+
+test('ранец: игрок, который рулит к следующей монете, собирает все монеты полос (дорожка достижима на скорости полёта)', () => {
+  for (const seed of [3, 11, 27]) {
+    const { run, coins } = jetFlight(seed, 300 + seed * 40);
+    const lanesCoins = coins.filter((c) => Number.isInteger(c.lane));
+    runTo(run, coins[coins.length - 1].z + 2, (r) => {
+      // the next coin not yet taken: once the coins of this lane are taken, steer to it
+      const next = lanesCoins.find((c) => !c.taken && c.z > r.z - C.COIN_RZ);
+      if (next && next.lane !== r.lane && !r.queue.length) R.act(r, next.lane < r.lane ? 'left' : 'right');
+    });
+    const missed = lanesCoins.filter((c) => !c.taken);
+    assert.equal(missed.length, 0, `мир ${seed}: пропущено ${missed.length} из ${lanesCoins.length}`);
+  }
+});
+
+test('ботинки: высокий прыжок над рядом монет собирает их все (монеты под дугой притягиваются вниз)', () => {
+  for (const v0z of [30, 900]) {
+    const run = bare();
+    run.z = v0z;
+    run.power.boots = 30;
+    const v = R.speedAt(v0z);
+    const row = [];
+    for (let i = 0; i < 10; i++) row.push(coin(run, 0, v0z + 12 + i * 1.8));
+    const side = coin(run, 1, v0z + 16);
+    runTo(run, v0z + 12 + 18 + 2, pressAt(v0z + 12 - v * 0.05, 'jump'));
+    assert.ok(run.events.includes('superjump'));
+    assert.deepEqual(row.filter((c) => !c.taken).map((c) => c.z.toFixed(1)), [], `скорость ${v.toFixed(0)}: все монеты ряда собраны`);
+    assert.equal(side.taken, false, 'монета соседней полосы не притягивается');
+  }
 });

@@ -56,6 +56,16 @@ const MUTANTS = [
   { id: 'rebind-keeps-duplicate', file: 'js/core.js', from: '    for (const a of ACTIONS) b[a] = b[a].map((c) => (c === code ? null : c));\n', to: '', unit: 'переназначение' },
   { id: 'new-action-steals-key', file: 'js/core.js', from: 'out[a] = DEFAULT_BINDINGS[a].map((c) => (c && !used.has(c) ? c : null));', to: 'out[a] = DEFAULT_BINDINGS[a].slice();', unit: 'привязки из хранилища|сохранение 1.0' },
   { id: 'swipe-no-threshold', file: 'js/core.js', from: 'if (ax < thr && ay < thr) {', to: 'if (ax < 5 && ay < 5) {', unit: 'свайпы' },
+  // 2.0.5: доска убирает препятствия вокруг, неуязвимость их разбивает, гудки, монеты ранца, ботинки
+  { id: 'board-no-clear', file: 'js/core.js', from: '      clearAround(run);\n', to: '', unit: 'доска спасает' },
+  { id: 'invuln-passes-through', file: 'js/core.js', from: "if (run.invulnT > 0) { if (o.type !== 'pit') smash(run, o); return 'smash'; }", to: 'if (run.invulnT > 0) return;', unit: 'неуязвимость \\(|доска спасает: препятствия' },
+  { id: 'horn-every-train', file: 'js/core.js', from: 'if (o.k > 0 && hornFor(o) && run.t - run.hornT >= C.HORN_GAP)', to: 'if (o.k > 0)', unit: 'гудки' },
+  { id: 'horn-no-gap', file: 'js/core.js', from: ' && run.t - run.hornT >= C.HORN_GAP)', to: ')', unit: 'гудки' },
+  { id: 'jet-coins-one-lane', file: 'js/core.js', from: "const to = lane === 0 ? (r() < 0.5 ? -1 : 1) : 0;", to: 'const to = lane;', unit: 'ранец: монеты' },
+  { id: 'jet-coins-skip-lane', file: 'js/core.js', from: "const to = lane === 0 ? (r() < 0.5 ? -1 : 1) : 0;", to: "const to = lane === 0 ? (r() < 0.5 ? -1 : 1) : -lane;", unit: 'ранец: монеты' },
+  { id: 'jet-coins-no-middle', file: 'js/core.js', from: 'addCoin(w, (lane + to) / 2, z, C.JET_Y + 0.6);', to: 'addCoin(w, to, z, C.JET_Y + 0.6);', unit: 'ранец: монеты' },
+  { id: 'boots-no-pull', file: 'js/core.js', from: "      else if (boots && Math.abs(laneX(c.lane) - run.x) < C.COIN_R && Math.abs(dz) < C.COIN_RZ && c.y - 0.5 < run.y + h) got = true;\n", to: '', unit: 'ботинки: высокий' },
+  { id: 'boots-pull-any-lane', file: 'js/core.js', from: "else if (boots && Math.abs(laneX(c.lane) - run.x) < C.COIN_R &&", to: "else if (boots &&", unit: 'ботинки: высокий' },
   // ---------- прогресс (meta.js) ----------
   { id: 'migrate-loses-upgrades', file: 'js/meta.js', from: '    if (isObj(src.upgrades)) for (const k of R.POWERS) d.upgrades[k] = int(src.upgrades[k], 0, 0, R.MAX_LEVEL);\n', to: '', unit: 'сохранение 1.0' },
   { id: 'tutorial-for-veterans', file: 'js/meta.js', from: 'd.tutorialDone = v1 ? d.runs > 0 : src.tutorialDone === true;', to: 'd.tutorialDone = src.tutorialDone === true;', unit: 'сохранение 1.0' },

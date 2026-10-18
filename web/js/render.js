@@ -165,6 +165,7 @@
       }
     }
     const POWER_COLORS = { magnet: [0xff5a5a, 0xffffff], x2: [0xffe14f, 0xffa020], boots: [0x6aff8a, 0xffffff], board: [0xd08aff, 0x4fe3ff], jetpack: [0xffa64d, 0xff5a1a], key: [0x7ad0ff, 0xffffff] };
+    const puffed = new WeakSet();
     function event(name, run, view) {
       const [x, y, z] = at(run, view);
       const v = run.speed || 13;
@@ -183,6 +184,17 @@
       else if (name === 'key') burst(glow, 24, x, y + 1.0, z + 0.5, 4, 0.6, 0.3, 0.05, POWER_COLORS.key, 0, 2);
       else if (name.startsWith('trick:')) burst(glow, 8 + Math.min(12, run.combo * 2), x, y + 1.9, z, 3, 0.45, 0.22, 0.04, run.combo >= 5 ? [0xff5aff, 0xffe14f] : [0xffe14f, 0xffffff], 0, 2);
       else if (name === 'revive') burst(glow, 60, x, y + 1.0, z, 5, 0.8, 0.35, 0.05, [0xffffff, 0x9ad8ff], 0, 1.5);
+      else if (name === 'smash') {
+        // obstacles that popped away: a puff of sparks and dust where each of them stood (each once;
+        // the list belongs to the run, the renderer only reads it)
+        for (const m of run.smashes) {
+          if (puffed.has(m)) continue;
+          puffed.add(m);
+          const ox = -R.laneX(m.lane), oy = m.type === 'train' ? 2.2 : 0.8;
+          burst(glow, m.type === 'train' ? 50 : 26, ox, oy, m.z + 0.5, 6, 0.5, 0.3, 0.05, [0xd08aff, 0x4fe3ff, 0xffffff, 0xffd080], 4, 1.2);
+          burst(soft, m.type === 'train' ? 30 : 14, ox, oy * 0.6, m.z + 0.8, 3, 0.8, 0.6, 1.8, [0xbab4a8, 0x9a9488], -0.3, 1.2);
+        }
+      }
       else if (name === 'board-on') burst(glow, 24, x, y + 0.1, z, 3, 0.5, 0.25, 0.05, [board ? board.userData.cfg.b : 0x4fe3ff, 0xffffff], 0, 2);
       void v;
     }

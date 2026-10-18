@@ -52,7 +52,7 @@ played again from the settings.
 - **Fence** (a net with a sign) - only go around it; with super sneakers you can jump it.
 - **Repair pit** (a dark hole with cones) - jump over it; a slide will not help.
 - **Trains**: standing ones; with a ramp - run up onto the roof and along the cars, hopping onto
-  the train on the next track; **oncoming** ones with headlights sound the horn; **freight** trains
+  the train on the next track; **oncoming** ones with headlights come at you (now and then sounding the horn); **freight** trains
   roll away and you catch up with them.
 - **A side hit** throws you back to the track you came from and you stumble; a second hit soon after is a crash.
 - **Clipping an edge** is a knock, not a crash: the toes on the top of a hurdle after a late jump, its
@@ -66,9 +66,9 @@ played again from the settings.
 | --- | --- | --- |
 | Magnet | pulls coins from every track | 10 s |
 | Double score | points for metres, coins and tricks are doubled | 12 s |
-| Super sneakers | jump higher than a train or a fence | 10 s |
-| Hoverboard | saves you from one crash | 30 s |
-| Jetpack | flight over the trains along a trail of coins, soft landing | 7 s |
+| Super sneakers | jump higher than a train or a fence; coins under the jump are pulled down to you | 10 s |
+| Hoverboard | saves you from one crash: the obstacles in that lane around you pop away | 30 s |
+| Jetpack | flight over the trains along a trail of coins that weaves between the tracks; soft landing | 7 s |
 
 Every upgrade in the shop (up to level five) makes a power-up last 20 % longer. The time left of
 each power-up is a bar in the top left corner.
@@ -151,10 +151,10 @@ tools/mutate.js     testing the tests: breaks the rules one by one, the laws mus
 
 ```
 npm ci
-npm test            # 65 laws of the rules and the progress, ~40 s
+npm test            # 72 laws of the rules and the progress, ~70 s
 npm run test:web    # 40 page scenarios, ~23 min
 npm run test:app    # 3 app laws, ~1 min
-npm run mutate      # 89 mutants, ~65 min (node tools/mutate.js --check only checks the breakages fit)
+npm run mutate      # 98 mutants, ~65 min (node tools/mutate.js --check only checks the breakages fit)
 npm run screens     # README frames
 npm run dist        # dist/RailRunner-<version>-Setup.exe and -Portable.exe
 ```

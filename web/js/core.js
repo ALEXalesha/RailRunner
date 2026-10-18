@@ -65,6 +65,11 @@
     JET_RATE: 4,                // how fast it climbs to that height (1/s)
     JET_LAND_INV: 1.8,          // safe time after the jetpack runs out (fall and landing)
     REVIVE_INV: 2.5,
+    CLEAR_AHEAD: 12,            // the board saves the player: obstacles in that lane this far ahead pop away
+    CLEAR_BEHIND: 3,            // and this far behind (the player never ends up inside a model)
+    HORN_CHANCE: 0.25,          // an oncoming train sounds its horn only now and then
+    HORN_GAP: 8,                // and never more often than once in this many seconds
+    JET_SEG: [22, 40],          // jetpack coins: a straight stretch of this many metres, then the next lane
     TRICK_POINTS: 25,
     COMBO_TIME: 3,
     NEAR_TIME: 0.45,            // a lane change this close to a train is a near miss
@@ -539,6 +544,8 @@
       stats: newStats(),
       queue: [],
       events: [],
+      smashes: [],             // obstacles that just popped away (the board, invulnerability), for the picture
+      hornT: -Infinity,        // when the last horn sounded
     };
   }
 
@@ -675,8 +682,30 @@
     return Math.min(up, down, side);
   }
 
+  // An obstacle pops away (the board saved the player, or the player is invulnerable and touches it):
+  // it no longer stops anything and is not drawn - the player never runs inside a model.
+  function smash(run, o) {
+    if (o.broken) return;
+    o.broken = true;
+    run.smashes.push({ id: o.id, type: o.type, lane: o.lane, z: Math.max(extentAt(o, run.z)[0], run.z) });
+    if (run.smashes.length > 16) run.smashes.shift();
+    if (!run.events.includes('smash')) run.events.push('smash');
+  }
+  // the board saved the player: everything in that lane around the player pops away (not the pits,
+  // and not the roof the player stands on)
+  function clearAround(run) {
+    for (const o of nearObstacles(run, C.CLEAR_AHEAD + 30)) {
+      if (o.broken || o.type === 'pit' || o === run.under) continue;
+      if (o.lane !== run.lane && !overlapsX(run.x, o)) continue;
+      const [a, b] = extentAt(o, run.z);
+      if (b < run.z - C.CLEAR_BEHIND || a > run.z + C.CLEAR_AHEAD) continue;
+      if (isSupport(o) && run.y >= solidAt(o, Math.min(b, Math.max(a, run.z)))[1] - C.STEP) continue;
+      smash(run, o);
+    }
+  }
+
   function hit(run, o, lateral, prevX) {
-    if (run.invulnT > 0) return;
+    if (run.invulnT > 0) { if (o.type !== 'pit') smash(run, o); return 'smash'; }
     if (lateral && run.stumbleT <= 0) {
       // bounced off a side: back to the lane on the side it came from (not the lane of the
       // last key press - after two quick presses across a train that would be the train's
@@ -687,9 +716,9 @@
     }
     if (run.power.board > 0) {
       run.power.board = 0;
-      o.broken = true;
+      if (o.type === 'pit') { o.broken = true; run.y = 0; run.vy = 0; } else smash(run, o);
+      clearAround(run);
       run.invulnT = C.INVULN;
-      if (o.type === 'pit') { run.y = 0; run.vy = 0; }
       run.events.push('board-break');
       return 'board';
     }
@@ -761,16 +790,31 @@
     }
   }
 
-  // jetpack: coins along the safe lanes high in the air for the whole flight
+  // does an oncoming train sound its horn: a quarter of them, decided by the train itself (the world's
+  // random numbers are not used, so the world stays the same)
+  const hornFor = (o) => rng(((o.id + 1) * 0x9e3779b1) >>> 0)() < C.HORN_CHANCE;
+
+  // jetpack: a trail of coins high in the air that weaves between the lanes for the whole flight -
+  // a straight stretch, one coin halfway across, the next lane (always a neighbour, so the player
+  // can steer after it); nothing up there stops the player. Its own random numbers from the seed
+  // and the place, so the world stays the same.
   function jetCoins(run, dur) {
     const w = run.world;
     const flight = speedAt(run.z + 50) * dur;
     generateUntil(w, run.z + flight + 60);
     const zEnd = run.z + flight - 12;
-    let pi = 0;
+    const r = rng((w.seed ^ Math.imul(Math.floor(run.z) + 1, 0x85ebca6b)) >>> 0);
+    let lane = run.lane;
+    let next = run.z + 10 + Math.max(C.JET_SEG[0], switchDist(speedAt(run.z)) + 4) * (0.5 + 0.5 * r());
     for (let z = run.z + 10; z < zEnd; z += 2.2) {
-      while (pi + 1 < w.path.length && w.path[pi + 1].z <= z) pi++;
-      const lane = w.path[pi] ? w.path[pi].lane : run.lane;
+      if (z >= next && z + 2.2 < zEnd) {
+        const to = lane === 0 ? (r() < 0.5 ? -1 : 1) : 0;
+        addCoin(w, (lane + to) / 2, z, C.JET_Y + 0.6);
+        lane = to;
+        const seg = C.JET_SEG[0] + (C.JET_SEG[1] - C.JET_SEG[0]) * r();
+        next = z + Math.max(seg, switchDist(speedAt(z)) + 4);
+        continue;
+      }
       addCoin(w, lane, z, C.JET_Y + 0.6);
     }
     w.coins.sort((a, b) => a.z - b.z);
@@ -780,6 +824,7 @@
     const w = run.world;
     const h = playerH(run);
     const mag = run.power.magnet > 0;
+    const boots = run.power.boots > 0 && !run.grounded && !flying(run);
     for (const c of w.coins) {
       if (c.taken) continue;
       const dz = c.z - run.z;
@@ -787,6 +832,8 @@
       if (dz < -2) continue;
       let got = false;
       if (mag && dz >= -1 && dz <= C.MAGNET_RANGE && Math.abs(c.y - run.y) < 6) got = true;
+      // high-jump boots: coins right below the player in the air (in that lane) come up to them
+      else if (boots && Math.abs(laneX(c.lane) - run.x) < C.COIN_R && Math.abs(dz) < C.COIN_RZ && c.y - 0.5 < run.y + h) got = true;
       else if (Math.abs(laneX(c.lane) - run.x) < C.COIN_R && Math.abs(dz) < C.COIN_RZ && c.y + 0.5 > run.y && c.y - 0.5 < run.y + h) got = true;
       if (got) {
         c.taken = true;
@@ -861,7 +908,10 @@
     const near = nearObstacles(run, 4);
     for (const o of w.obstacles) {
       if (o.enc0 > run.z + 260) break;
-      if (o.moving && !o.triggered && run.z >= o.trigger) { o.triggered = true; if (o.k > 0) run.events.push('horn'); }
+      if (o.moving && !o.triggered && run.z >= o.trigger) {
+        o.triggered = true;
+        if (o.k > 0 && hornFor(o) && run.t - run.hornT >= C.HORN_GAP) { run.hornT = run.t; run.events.push('horn'); }
+      }
     }
 
     // up and down
@@ -1078,7 +1128,7 @@
   return {
     C, LANES, ACTIONS, POWERS, POWER_BASE, MAX_LEVEL, UPGRADE_COST, SLOTS, DEFAULT_BINDINGS, DISTRICTS, OBSTACLES, TRICKS,
     rng, speedAt, switchDist, rowGap, laneX, jumpHeightAt, airTime, trainLen, pitTakeoff,
-    offsetAt, extentAt, solidAt, encounter, isSupport, isBlocking, halfW,
+    offsetAt, extentAt, solidAt, encounter, isSupport, isBlocking, halfW, hornFor,
     createWorld, generateUntil, prune, districtAt, ensureDistricts,
     powerDuration, upgradeCost,
     newRun, act, step, advance, result, autopilot, nearObstacles, playerH, mult, flying, revive, reviveCost,

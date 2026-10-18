@@ -109,6 +109,7 @@
     },
     revive() { arp([392, 523, 659, 784, 1046], 0.07, 'triangle', 0.2, 0.25); noise(0.6, 0.15, 'highpass', 2000, 8000); },
     mission() { arp([784, 988, 1175, 1568], 0.09, 'triangle', 0.2, 0.22); },
+    smash() { noise(0.25, 0.35, 'bandpass', 1800, 300); tone('triangle', 520, 1300, 0.12, 0.12); },
     whoosh() { noise(0.9, 0.3, 'bandpass', 300, 3000); },
     horn() {
       for (const f of [311, 370]) {
