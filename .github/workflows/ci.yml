@@ -10,9 +10,15 @@ on:
 
 jobs:
   tests:
-    name: Laws
+    # The GitHub runner draws WebGL in software: one worker took more than 30 minutes and every
+    # run since 18.10 was cancelled by the timeout. Three shards run side by side.
+    name: Laws (part ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
     steps:
@@ -25,6 +31,7 @@ jobs:
           npm ci --no-audit --no-fund
           npx playwright install --with-deps chromium
       - name: Game rules (node:test)
+        if: matrix.shard == 1
         run: npm test
-      - name: Page in headless Chromium (Playwright, one worker)
-        run: npx playwright test --workers=1
+      - name: Page in headless Chromium (Playwright, one worker, one shard)
+        run: npx playwright test --workers=1 --shard=${{ matrix.shard }}/3
