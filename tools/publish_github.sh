@@ -110,6 +110,14 @@ PATH_SED="$GIT_DIR_ABS/publish-path.sed"
 PATH_GREP="$GIT_DIR_ABS/publish-path.grep"
 printf '%s\n' "s#$PATH_RE#Users\\1you#gI" > "$PATH_SED"
 printf '%s\n' "$PATH_RE" > "$PATH_GREP"
+# The Drive folder on this PC in any spelling (C:\..., /c/..., C--...-): privatePath above is
+# the home folder, the projects live elsewhere. Only the first name goes into the pattern,
+# assembled from pieces, so the path itself is not written in any file (review 25.10).
+PN=Ale; PN="${PN}xey"
+printf '%s\n' 's#([a-z]:|/[a-z])([\/]+)drive[\/]+'"$PN"'#\1\2Projects#gI' \
+  's#([a-z])--drive-+'"$PN"'#\1--Projects#gI' \
+  's#drive([\/]+|-+)'"$PN"'#Projects#gI' >> "$PATH_SED"
+printf '%s\n' 'drive([\/]+|-+)'"$PN" >> "$PATH_GREP"
 
 git remote get-url github >/dev/null 2>&1 || git remote add github "https://github.com/$REPO.git"
 
