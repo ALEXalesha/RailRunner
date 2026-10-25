@@ -159,7 +159,7 @@ tools/mutate.js     testing the tests: breaks the rules one by one, the laws mus
 
 ```
 npm ci
-npm test            # 81 laws of the rules and the progress, ~70 s
+npm test            # 83 laws of the rules, the progress and CI, ~70 s
 npm run test:web    # 43 page scenarios, ~23 min
 npm run test:app    # 3 app laws, ~1 min
 npm run mutate      # 116 mutants, ~70 min (node tools/mutate.js --check only checks the breakages fit)
