@@ -1,4 +1,4 @@
-// Laws of the page: headless Chromium only, one worker, output in TEMP.
+// Laws of the page: headless Chromium only, one worker, output in TEMP. Every test opens its own page.
 // RR_WEB - another web/ folder (tools/mutate.js runs the laws on broken copies).
 const os = require('os');
 const path = require('path');
@@ -7,7 +7,7 @@ const { defineConfig } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests/web',
   workers: 1,
-  fullyParallel: false,
+  fullyParallel: true, // --shard in CI splits by test, not by file (there is one spec file)
   timeout: 90000,
   expect: { timeout: 10000 },
   reporter: [['list']],
