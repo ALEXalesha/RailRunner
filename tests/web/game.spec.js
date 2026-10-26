@@ -179,8 +179,9 @@ test('пауза: P, Esc и кнопка; на паузе мир стоит; п�
     expect((await state(page)).state).toBe('countdown');
     await expect(page.locator('#hud-count')).toHaveText(/[123]/);
     await page.waitForFunction(() => RailRunner.state === 'playing', null, { timeout: 8000 });
-    await page.waitForTimeout(300);
-    expect((await state(page)).z).toBeGreaterThan(z1);
+    // Ждём, пока бегун сдвинется, а не 300 мс: мир идёт по кадрам, а безголовый Chromium
+    // на CI без видеокарты рисует город несколько кадров в секунду - за 300 мс кадра могло не быть.
+    await expect.poll(async () => (await state(page)).z).toBeGreaterThan(z1);
   }
 });
 
